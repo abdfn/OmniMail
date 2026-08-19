@@ -5,8 +5,8 @@ export const enMailboxSettings: Record<string, string> = {
     'Set the fixed prefix used by quick generation and the browser extension',
   '固定前缀': 'Fixed prefix',
   '格式预览': 'Format preview',
-  '留空时只使用随机字符；支持字母、数字、点、下划线、加号和连字符，最多 20 个字符。':
-    'Leave blank to use random characters only. Supports letters, numbers, periods, underscores, plus signs, and hyphens, up to 20 characters.',
+  '留空时生成双英文单词和短随机后缀；固定前缀最多 20 个字符。':
+    'Leave blank to generate two English words with a short random suffix. Fixed prefixes support up to 20 characters.',
   '保存格式': 'Save format',
   '已保存': 'Saved',
 }

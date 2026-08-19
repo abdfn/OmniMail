@@ -3,6 +3,7 @@ import {
   addMailbox,
   canCreateMailbox,
   deleteMailbox,
+  listMailboxes,
   mailboxDomain,
   updateMailbox,
 } from './mailbox-api'
@@ -37,6 +38,43 @@ describe('mailboxDomain', () => {
   it('allows administrators without a separate mailbox permission', () => {
     expect(canCreateMailbox(user('admin', false))).toBe(true)
     expect(canCreateMailbox(user('super_admin', false))).toBe(true)
+  })
+
+  it('lists newest mailboxes first and exposes their creation time', async () => {
+    let query = ''
+    const database = {
+      prepare(sql: string) {
+        query = sql
+        const statement = {
+          bind() { return statement },
+          all: async () => ({ results: [{
+            address: 'new@example.com',
+            is_primary: 0,
+            is_active: 1,
+            created_at: 30,
+          }, {
+            address: 'old@example.com',
+            is_primary: 1,
+            is_active: 1,
+            created_at: 10,
+          }] }),
+        }
+        return statement
+      },
+    }
+
+    const response = await listMailboxes(
+      { DB: database } as unknown as Env,
+      user('user', true),
+    )
+
+    expect(query).toContain('ORDER BY created_at DESC, rowid DESC')
+    await expect(response.json()).resolves.toMatchObject({
+      mailboxes: [
+        { address: 'new@example.com', createdAt: 30 },
+        { address: 'old@example.com', createdAt: 10 },
+      ],
+    })
   })
 
   it('does not reactivate a mailbox on a disabled domain', async () => {

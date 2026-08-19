@@ -365,6 +365,7 @@ export interface MailboxAddress {
   domain: string
   isPrimary: boolean
   isActive: boolean
+  createdAt: number
 }
 
 export interface ManagedDomain {

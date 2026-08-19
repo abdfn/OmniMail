@@ -7,8 +7,8 @@ import type { MailboxAddress } from '../lib/api'
 import { attachmentSelectionError, formatAttachmentSize } from '../lib/attachmentPolicy'
 
 const mailboxes: MailboxAddress[] = [
-  { address: 'owner@example.com', domain: 'example.com', isPrimary: true, isActive: true },
-  { address: 'owner@other.example', domain: 'other.example', isPrimary: false, isActive: true },
+  { address: 'owner@example.com', domain: 'example.com', isPrimary: true, isActive: true, createdAt: 1 },
+  { address: 'owner@other.example', domain: 'other.example', isPrimary: false, isActive: true, createdAt: 2 },
 ]
 
 describe('compose draft loading', () => {

@@ -5,6 +5,7 @@ interface MailboxRow {
   address: string
   is_primary: number
   is_active: number
+  created_at: number
 }
 
 function json(body: unknown, status = 200): Response {
@@ -25,6 +26,7 @@ function mailboxJson(row: MailboxRow) {
     domain: mailboxDomain(row.address),
     isPrimary: Boolean(row.is_primary),
     isActive: Boolean(row.is_active),
+    createdAt: row.created_at,
   }
 }
 
@@ -43,10 +45,10 @@ async function auditMailbox(
 
 export async function listMailboxes(env: Env, user: SessionUser): Promise<Response> {
   const { results } = await env.DB.prepare(
-    `SELECT address, is_primary, is_active
+    `SELECT address, is_primary, is_active, created_at
        FROM mailboxes
       WHERE user_id = ? AND is_hidden = 0
-      ORDER BY is_active DESC, is_primary DESC, address`,
+      ORDER BY created_at DESC, rowid DESC`,
   ).bind(user.id).all<MailboxRow>()
   return json({ mailboxes: results.map(mailboxJson) })
 }
@@ -63,7 +65,7 @@ export async function addMailbox(
   const address = normalizeEmail(body.address || '')
   if (!validEmail(address)) return json({ error: '请输入有效的完整邮箱地址。' }, 400)
   const existing = await env.DB.prepare(
-    'SELECT address, user_id, is_primary, is_active FROM mailboxes WHERE address = ?',
+    'SELECT address, user_id, is_primary, is_active, created_at FROM mailboxes WHERE address = ?',
   ).bind(address).first<MailboxRow & { user_id: string }>()
   if (existing?.user_id && existing.user_id !== user.id) {
     return json({ error: '这个邮箱地址已属于其他账户。' }, 409)
@@ -93,6 +95,7 @@ export async function addMailbox(
     'SELECT COUNT(*) AS count FROM mailboxes WHERE user_id = ? AND is_hidden = 0',
   ).bind(user.id).first<{ count: number }>()
   const isPrimary = existing?.is_primary || Number((mailboxCount?.count ?? 0) === 0)
+  const createdAt = existing?.created_at ?? Math.floor(Date.now() / 1000)
   if (!existing && user.role !== 'super_admin' && (mailboxCount?.count ?? 0) >= user.mailboxLimit) {
     return json({ error: `最多可以创建 ${user.mailboxLimit} 个邮箱。` }, 403)
   }
@@ -103,12 +106,18 @@ export async function addMailbox(
     ).bind(isPrimary, address, user.id).run()
   } else {
     await env.DB.prepare(
-      'INSERT INTO mailboxes (address, user_id, is_primary, is_active) VALUES (?, ?, ?, 1)',
-    ).bind(address, user.id, isPrimary).run()
+      `INSERT INTO mailboxes (address, user_id, is_primary, is_active, created_at)
+       VALUES (?, ?, ?, 1, ?)`,
+    ).bind(address, user.id, isPrimary, createdAt).run()
   }
   await auditMailbox(env, user.id, existing ? 'mailbox.enable' : 'mailbox.create', address, ip)
   return json({
-    mailbox: mailboxJson({ address, is_primary: isPrimary, is_active: 1 }),
+    mailbox: mailboxJson({
+      address,
+      is_primary: isPrimary,
+      is_active: 1,
+      created_at: createdAt,
+    }),
   }, existing ? 200 : 201)
 }
 
@@ -133,7 +142,7 @@ export async function updateMailbox(
   if (changesStatus === makesPrimary) return json({ error: '邮箱更新内容无效。' }, 400)
 
   const mailbox = await env.DB.prepare(
-    `SELECT address, is_primary, is_active
+    `SELECT address, is_primary, is_active, created_at
        FROM mailboxes WHERE address = ? AND user_id = ? AND is_hidden = 0`,
   ).bind(address, user.id).first<MailboxRow>()
   if (!mailbox) return json({ error: '邮箱地址不存在。' }, 404)
@@ -207,7 +216,7 @@ export async function deleteMailbox(
     return json({ error: '邮箱地址格式无效。' }, 400)
   }
   const mailbox = await env.DB.prepare(
-    `SELECT address, is_primary, is_active
+    `SELECT address, is_primary, is_active, created_at
        FROM mailboxes WHERE address = ? AND user_id = ? AND is_hidden = 0`,
   ).bind(address, user.id).first<MailboxRow>()
   if (!mailbox) return json({ error: '邮箱地址不存在。' }, 404)

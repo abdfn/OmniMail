@@ -42,6 +42,9 @@ export function QuickMailboxGenerator({
   const [open, setOpen] = useState(false)
   const [domain, setDomain] = useState('')
   const [localPart, setLocalPart] = useState('')
+  const [suggestedLocalPart, setSuggestedLocalPart] = useState(
+    () => randomMailboxLocalPart(randomMailboxPrefix),
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
@@ -50,6 +53,10 @@ export function QuickMailboxGenerator({
     if (enabledDomains.some((item) => item.name === domain)) return
     setDomain(enabledDomains[0]?.name || '')
   }, [domain, enabledDomains])
+
+  useEffect(() => {
+    setSuggestedLocalPart(randomMailboxLocalPart(randomMailboxPrefix))
+  }, [randomMailboxPrefix])
 
   useEffect(() => {
     if (!open) return
@@ -79,8 +86,9 @@ export function QuickMailboxGenerator({
     const maximumAttempts = requestedLocalPart ? 1 : 3
     for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
       try {
-        const nextLocalPart = requestedLocalPart
-          || randomMailboxLocalPart(randomMailboxPrefix)
+        const nextLocalPart = requestedLocalPart || (attempt === 0
+          ? suggestedLocalPart
+          : randomMailboxLocalPart(randomMailboxPrefix))
         const result = await api.addMailbox(`${nextLocalPart}@${domain}`)
         await onCreated(result.mailbox)
         setLocalPart('')
@@ -113,6 +121,7 @@ export function QuickMailboxGenerator({
         disabled={unavailable}
         onClick={() => {
           setError('')
+          if (!open) setSuggestedLocalPart(randomMailboxLocalPart(randomMailboxPrefix))
           setOpen((current) => !current)
         }}
       >
@@ -176,7 +185,7 @@ export function QuickMailboxGenerator({
             <div className="quick-mailbox__preview">
               <span>{t('即将创建')}</span>
               <strong>{localPart.trim().toLowerCase()
-                || `${randomMailboxPrefix}${t('随机字符')}`}@{domain}</strong>
+                || suggestedLocalPart}@{domain}</strong>
             </div>
             {error && <p className="quick-mailbox__error" role="alert">{error}</p>}
             <button

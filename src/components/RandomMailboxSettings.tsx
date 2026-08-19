@@ -74,10 +74,10 @@ export function RandomMailboxSettings({
         </label>
         <div className="random-mailbox-preview">
           <span>{t('格式预览')}</span>
-          <strong>{normalized}{t('随机字符')}@example.com</strong>
+          <strong>{normalized}silver-maple7k@example.com</strong>
         </div>
         <footer>
-          <small>{t('留空时只使用随机字符；支持字母、数字、点、下划线、加号和连字符，最多 20 个字符。')}</small>
+          <small>{t('留空时生成双英文单词和短随机后缀；固定前缀最多 20 个字符。')}</small>
           <button
             className="button button--secondary button--small"
             type="submit"

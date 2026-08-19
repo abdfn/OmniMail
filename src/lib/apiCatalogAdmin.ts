@@ -126,7 +126,7 @@ export const adminSettingsEndpoints: ApiEndpoint[] = [
   {
     method: 'PATCH', path: '/api/admin/settings/random-mailbox-prefix', group: 'adminSettings', auth: 'admin',
     title: l('设置随机邮箱前缀', 'Configure random mailbox prefix'),
-    description: l('设置快速生成随机地址时使用的固定前缀。', 'Set the fixed prefix used when generating random mailbox addresses.'),
+    description: l('设置可读单词组合随机地址使用的固定前缀。', 'Set the fixed prefix used by readable word-pair mailbox addresses.'),
     request: 'JSON · prefix', response: '200 · { randomMailboxPrefix }',
     exampleBody: { prefix: 'omni-' },
   },

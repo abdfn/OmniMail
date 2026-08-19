@@ -10,7 +10,7 @@ export const mailboxEndpoints: ApiEndpoint[] = [
   {
     method: 'GET', path: '/api/mailboxes', group: 'mailboxes', auth: 'authenticated',
     title: l('列出当前用户邮箱', 'List current-user mailboxes'),
-    description: l('返回当前用户可见的邮箱地址、主邮箱和启用状态。', 'Return visible mailbox addresses, the primary mailbox, and active state.'),
+    description: l('按创建时间倒序返回当前用户可见的邮箱地址、主邮箱和启用状态。', 'Return visible mailbox addresses, primary state, and active state in reverse creation order.'),
     request: 'No parameters', response: '200 · { mailboxes }',
   },
   {

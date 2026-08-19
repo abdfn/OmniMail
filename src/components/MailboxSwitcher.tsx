@@ -27,6 +27,7 @@ import {
   type MailboxScope,
 } from '../lib/api'
 import { t } from '../lib/i18n'
+import { sortMailboxesNewestFirst } from '../lib/mailboxAddress'
 import { MailboxAddressOption } from './MailboxAddressOption'
 import { ManagedMailboxList } from './ManagedMailboxList'
 
@@ -255,7 +256,7 @@ export function MailboxSwitcher({
   )
   const groups = useMemo(() => {
     const grouped = new Map<string, MailboxAddress[]>()
-    for (const mailbox of activeMailboxes) {
+    for (const mailbox of sortMailboxesNewestFirst(activeMailboxes)) {
       const entries = grouped.get(mailbox.domain) || []
       entries.push(mailbox)
       grouped.set(mailbox.domain, entries)
