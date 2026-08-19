@@ -267,6 +267,46 @@ export interface PublicMailboxLinkResult {
   publicUrl?: string
 }
 
+export type AdminMailboxStatusFilter = 'all' | 'enabled' | 'disabled'
+export type AdminMailboxBulkAction = 'enable' | 'disable' | 'delete'
+
+export interface AdminMailbox {
+  address: string
+  domain: string
+  isPrimary: boolean
+  isActive: boolean
+  createdAt: number
+  linkEnabled: boolean
+  owner: {
+    id: string
+    email: string
+    displayName: string
+    role: UserRole
+    status: AccountStatus
+  }
+}
+
+export interface AdminMailboxTotals {
+  total: number
+  active: number
+  disabled: number
+  publicLinks: number
+}
+
+export type AdminMailboxBulkResultStatus =
+  | 'updated'
+  | 'unchanged'
+  | 'scheduled'
+  | 'not_found'
+  | 'primary_protected'
+  | 'domain_disabled'
+  | 'workflow_failed'
+
+export interface AdminMailboxBulkResult {
+  address: string
+  status: AdminMailboxBulkResultStatus
+}
+
 export interface AdminUserTotals {
   total: number
   active: number

@@ -372,12 +372,6 @@
   font-size: 12px;
 }
 
-.audit-load-more {
-  display: flex;
-  width: calc(100% - 36px);
-  margin: 14px 18px 18px;
-}
-
 @media (max-width: 1000px) {
   .audit-heading,
   .audit-row {

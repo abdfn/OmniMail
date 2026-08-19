@@ -51,6 +51,7 @@ import type {
 } from './api-types'
 import type { ExtensionAuthorizationRequest } from './extensionAuthorization'
 import { createICloudApi } from './icloud-api-client'
+import { createAdminMailboxApi } from './admin-mailbox-api-client'
 
 export class ApiError extends Error {
   status: number
@@ -221,8 +222,8 @@ export const api = {
   startBackup: () => request<{ id: string }>('/api/admin/backups', {
     method: 'POST',
   }),
-  backupObjects: (prefix: string, cursor?: string) => {
-    const search = new URLSearchParams({ prefix, limit: '30' })
+  backupObjects: (prefix: string, cursor?: string, limit = 30) => {
+    const search = new URLSearchParams({ prefix, limit: String(limit) })
     if (cursor) search.set('cursor', cursor)
     return request<{
       prefix: string
@@ -295,12 +296,13 @@ export const api = {
     days: AuditDays
     category: AuditCategory
     query: string
+    limit?: number
     cursor?: string
   }) => {
     const search = new URLSearchParams({
       days: String(input.days),
       category: input.category,
-      limit: '50',
+      limit: String(input.limit ?? 50),
     })
     if (input.query) search.set('q', input.query)
     if (input.cursor) search.set('cursor', input.cursor)
@@ -310,9 +312,12 @@ export const api = {
       summary: AuditSummary
     }>(`/api/admin/audit-logs?${search}`)
   },
-  adminMessages: (input: AdminMessageFilters & { cursor?: string }, signal?: AbortSignal) => {
+  adminMessages: (
+    input: AdminMessageFilters & { limit?: number; cursor?: string },
+    signal?: AbortSignal,
+  ) => {
     const search = new URLSearchParams({
-      limit: '30',
+      limit: String(input.limit ?? 30),
       direction: input.direction,
       folder: input.folder,
       status: input.status,
@@ -347,8 +352,8 @@ export const api = {
   adminRawUrl: (messageId: string) => (
     `${API_ORIGIN}/api/admin/messages/${encodeURIComponent(messageId)}/raw`
   ),
-  adminUsers: (cursor?: string) => {
-    const search = new URLSearchParams({ limit: '50' })
+  adminUsers: (cursor?: string, limit = 50) => {
+    const search = new URLSearchParams({ limit: String(limit) })
     if (cursor) search.set('cursor', cursor)
     return request<{
       users: AdminUser[]
@@ -393,8 +398,8 @@ export const api = {
     `/api/admin/domains/${encodeURIComponent(name)}`,
     { method: 'DELETE' },
   ),
-  temporaryInvites: (cursor?: string) => {
-    const search = new URLSearchParams({ limit: '30' })
+  temporaryInvites: (cursor?: string, limit = 30) => {
+    const search = new URLSearchParams({ limit: String(limit) })
     if (cursor) search.set('cursor', cursor)
     return request<{ invites: TemporaryInvite[]; page: PageInfo }>(
       `/api/admin/invites?${search}`,
@@ -431,6 +436,7 @@ export const api = {
       body: jsonBody({ action, mailboxes }),
     },
   ),
+  ...createAdminMailboxApi(request, jsonBody),
   temporaryInvite: (token: string) => request<{ invite: TemporaryInvite }>(
     `/api/invitations/${encodeURIComponent(token)}`,
   ),
@@ -472,11 +478,12 @@ export const api = {
     folder: Folder,
     query: string,
     scope: MailboxScope,
+    limit = 30,
     cursor?: string,
     version?: number,
     signal?: AbortSignal,
   ) => {
-    const search = new URLSearchParams({ folder, limit: '30' })
+    const search = new URLSearchParams({ folder, limit: String(limit) })
     if (query) search.set('q', query)
     if (scope.type === 'domain') search.set('domain', scope.value)
     if (scope.type === 'mailbox') search.set('mailbox', scope.value)

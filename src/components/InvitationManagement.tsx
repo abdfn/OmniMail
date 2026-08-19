@@ -25,6 +25,7 @@ import {
 import { getLocale, t } from '../lib/i18n'
 import { AdminPageHeader } from './AdminPageHeader'
 import { DangerConfirmDialog } from './DangerConfirmDialog'
+import { PageSizeSelect, type PageSize } from './PageSizeSelect'
 
 const initialDraft: CreateTemporaryInvite = {
   domain: '',
@@ -146,6 +147,7 @@ export function InvitationManagement({
   const [domains, setDomains] = useState<ManagedDomain[]>([])
   const [invites, setInvites] = useState<TemporaryInvite[]>([])
   const [page, setPage] = useState<PageInfo>({ hasMore: false, nextCursor: null, limit: 30 })
+  const [pageSize, setPageSize] = useState<PageSize>(30)
   const [draft, setDraft] = useState<CreateTemporaryInvite>(initialDraft)
   const [createdLink, setCreatedLink] = useState('')
   const [loading, setLoading] = useState(true)
@@ -170,7 +172,7 @@ export function InvitationManagement({
 
   useEffect(() => {
     let active = true
-    Promise.all([api.domains(), api.temporaryInvites()])
+    Promise.all([api.domains(), api.temporaryInvites(undefined, pageSize)])
       .then(([domainResult, inviteResult]) => {
         if (!active) return
         const enabled = domainResult.domains.filter((domain) => domain.isActive)
@@ -191,7 +193,7 @@ export function InvitationManagement({
     return () => {
       active = false
     }
-  }, [])
+  }, [pageSize])
 
   async function createInvite(event: FormEvent) {
     event.preventDefault()
@@ -224,7 +226,7 @@ export function InvitationManagement({
     setLoadingMore(true)
     setError('')
     try {
-      const result = await api.temporaryInvites(page.nextCursor)
+      const result = await api.temporaryInvites(page.nextCursor, pageSize)
       setInvites((items) => [...items, ...result.invites])
       setPage(result.page)
     } catch (loadError) {
@@ -550,19 +552,17 @@ export function InvitationManagement({
                       </footer>
                     </article>
                   ))}
-                  {page.hasMore && (
-                    <button
-                      className="button button--secondary invite-load-more"
-                      type="button"
-                      disabled={loadingMore}
-                      onClick={() => void loadMoreInvites()}
-                    >
-                      {loadingMore && <LoaderCircle className="spin" size={15} />}
-                      {t(loadingMore ? '正在加载…' : '加载更多邀请')}
-                    </button>
-                  )}
                 </div>
               )}
+              <footer className="page-size-footer">
+                <PageSizeSelect value={pageSize} disabled={loadingMore} onChange={setPageSize} />
+                {page.hasMore && (
+                  <button className="button button--secondary button--small" type="button" disabled={loadingMore} onClick={() => void loadMoreInvites()}>
+                    {loadingMore && <LoaderCircle className="spin" size={15} />}
+                    {t(loadingMore ? '正在加载…' : '加载更多邀请')}
+                  </button>
+                )}
+              </footer>
             </section>
           </>
         )}

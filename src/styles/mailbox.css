@@ -337,12 +337,6 @@
   border-bottom: 1px solid var(--line);
 }
 
-.message-load-more {
-  display: flex;
-  width: calc(100% - 32px);
-  margin: 14px 16px 18px;
-}
-
 .message-row:hover,
 .message-row.is-selected {
   background: var(--surface-muted);

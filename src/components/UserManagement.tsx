@@ -25,6 +25,7 @@ import {
 import { getLocale, t } from '../lib/i18n'
 import { roleLabel } from '../lib/roles'
 import { AdminPageHeader } from './AdminPageHeader'
+import { PageSizeSelect, type PageSize } from './PageSizeSelect'
 import { TemporaryUserExpiry } from './TemporaryUserExpiry'
 import { UserBanDialog } from './UserBanDialog'
 import { UserPolicyPanel } from './UserPolicyPanel'
@@ -196,6 +197,7 @@ export function UserManagement({
   const [users, setUsers] = useState<AdminUser[]>([])
   const [totals, setTotals] = useState<AdminUserTotals>({ total: 0, active: 0, disabled: 0 })
   const [page, setPage] = useState<PageInfo>({ hasMore: false, nextCursor: null, limit: 50 })
+  const [pageSize, setPageSize] = useState<PageSize>(50)
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -213,7 +215,7 @@ export function UserManagement({
     else setLoading(true)
     setError('')
     try {
-      const result = await api.adminUsers(cursor)
+      const result = await api.adminUsers(cursor, pageSize)
       setUsers((items) => {
         if (!cursor) return result.users
         const existing = new Set(items.map((item) => item.id))
@@ -231,7 +233,7 @@ export function UserManagement({
 
   useEffect(() => {
     void loadUsers()
-  }, [])
+  }, [pageSize])
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -417,20 +419,18 @@ export function UserManagement({
                 <ChevronRight size={16} />
               </button>
             ))}
-            {page.hasMore && !query.trim() && (
-              <button
-                className="button button--secondary user-load-more"
-                type="button"
-                disabled={loadingMore}
-                onClick={() => page.nextCursor && void loadUsers(page.nextCursor)}
-              >
-                {t(loadingMore ? '正在加载…' : '加载更多用户')}
-              </button>
-            )}
           </div>
         ) : (
           <div className="user-list-state">{t('没有符合条件的用户。')}</div>
         )}
+        <footer className="page-size-footer">
+          <PageSizeSelect value={pageSize} disabled={loading || loadingMore} onChange={setPageSize} />
+          {page.hasMore && !query.trim() && (
+            <button className="button button--secondary button--small" type="button" disabled={loadingMore} onClick={() => page.nextCursor && void loadUsers(page.nextCursor)}>
+              {t(loadingMore ? '正在加载…' : '加载更多用户')}
+            </button>
+          )}
+        </footer>
       </section>
 
       <UserPolicyPanel open={Boolean(selected || creating)} onClose={closePanel}>

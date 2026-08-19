@@ -79,6 +79,23 @@ export const enErrors: Record<string, string> = {
   '邮箱筛选条件无效。': 'The mailbox filter is invalid.',
   '只有主管理员可以管理公开取码链接。':
     'Only the owner can manage public code links.',
+  '只有主管理员可以管理全部邮箱。':
+    'Only the owner can manage all mailboxes.',
+  '邮箱管理筛选条件无效。': 'The mailbox management filter is invalid.',
+  'ownerEmail 必填且必须是有效的登录邮箱。':
+    'OwnerEmail is required and must be a valid sign-in email.',
+  'domain 必填且必须是有效域名。':
+    'Domain is required and must be a valid domain.',
+  'count 必填且需要在 1–100 之间。':
+    'Count is required and must be between 1 and 100.',
+  '所属用户不存在。': 'The mailbox owner does not exist.',
+  '只能为有效用户生成邮箱。': 'Mailboxes can only be created for an active user.',
+  '该用户的邮箱额度不足。': 'The user does not have enough mailbox quota.',
+  '随机邮箱生成冲突，请重试。': 'Random mailbox generation collided. Try again.',
+  'action 必填且只能是 enable、disable 或 delete。':
+    'Action is required and must be enable, disable, or delete.',
+  'mailboxes 必填，且单次需要选择 1–100 个有效邮箱。':
+    'Mailboxes is required and must contain between 1 and 100 valid addresses.',
   '取码链接筛选条件无效。': 'The code-link filter is invalid.',
   '邮箱分页游标无效。': 'The mailbox cursor is invalid.',
   'action 必填且只能是 issue 或 revoke。':

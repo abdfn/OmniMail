@@ -30,6 +30,7 @@ async function mockAdminMail(page: Page, role: 'super_admin' | 'admin' = 'super_
     folder: 'inbox' as 'inbox' | 'trash',
     visible: true,
     actions: [] as string[],
+    pageSizes: [] as string[],
     personalUpdates: 0,
   }
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -62,10 +63,14 @@ async function mockAdminMail(page: Page, role: 'super_admin' | 'admin' = 'super_
       state.personalUpdates += 1
       return json(route, { ok: true })
     }
-    if (path === '/api/admin/messages' && request.method() === 'GET') return json(route, {
-      messages: state.visible ? [summary(state.folder)] : [],
-      page: { hasMore: false, nextCursor: null, limit: 30 },
-    })
+    if (path === '/api/admin/messages' && request.method() === 'GET') {
+      const limit = new URL(request.url()).searchParams.get('limit') || '30'
+      state.pageSizes.push(limit)
+      return json(route, {
+        messages: state.visible ? [summary(state.folder)] : [],
+        page: { hasMore: false, nextCursor: null, limit: Number(limit) },
+      })
+    }
     if (path === '/api/admin/messages/admin-message-1' && request.method() === 'GET') {
       return json(route, {
         message: {
@@ -120,6 +125,16 @@ test('ordinary administrator cannot see or deep-link to mail management', async 
 
   await expect(page).toHaveURL(/\/mail\/inbox$/)
   await expect(page.getByRole('button', { name: '邮件管理' })).toHaveCount(0)
+})
+
+test('page size selector reloads the list with the selected limit', async ({ page }) => {
+  const state = await mockAdminMail(page)
+  await page.goto('/admin/mail')
+
+  const pageSize = page.getByLabel('每页条数')
+  await expect(pageSize).toHaveValue('30')
+  await pageSize.selectOption('100')
+  await expect.poll(() => state.pageSizes.at(-1)).toBe('100')
 })
 
 test('mail management stays within a mobile viewport', async ({ page }) => {

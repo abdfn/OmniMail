@@ -81,6 +81,27 @@ export const iCloudEndpoints: ApiEndpoint[] = [
 
 export const adminOperationEndpoints: ApiEndpoint[] = [
   {
+    method: 'GET', path: '/api/admin/mailboxes', group: 'adminOperations', auth: 'superAdmin',
+    title: l('分页查询全站邮箱', 'List all mailboxes'),
+    description: l('主管理员按创建时间倒序查询邮箱，并按邮箱、所属用户和状态筛选。', 'Let the owner list mailboxes newest first and filter by mailbox, owner, and status.'),
+    request: 'Query · q?, status=all|enabled|disabled, limit?, cursor?', response: '200 · { mailboxes, totals, page }',
+    examplePath: '/api/admin/mailboxes?status=all&limit=50',
+  },
+  {
+    method: 'POST', path: '/api/admin/mailboxes', group: 'adminOperations', auth: 'superAdmin',
+    title: l('批量生成邮箱', 'Bulk create mailboxes'),
+    description: l('主管理员为指定有效用户在已启用域名下随机生成最多 100 个邮箱。', 'Let the owner create up to 100 random mailboxes for an active user on an enabled domain.'),
+    request: 'JSON · ownerEmail, domain, count=1..100', response: '201 · { createdCount, mailboxes }',
+    exampleBody: { ownerEmail: 'owner@example.com', domain: 'example.com', count: 10 },
+  },
+  {
+    method: 'POST', path: '/api/admin/mailboxes/bulk', group: 'adminOperations', auth: 'superAdmin',
+    title: l('批量启停或删除邮箱', 'Bulk update or delete mailboxes'),
+    description: l('主管理员批量启用、停用或异步删除最多 100 个邮箱，主邮箱受保护。', 'Let the owner enable, disable, or asynchronously delete up to 100 mailboxes while protecting primary mailboxes.'),
+    request: 'JSON · action=enable|disable|delete, mailboxes[1..100]', response: '200 · { results, updatedCount }',
+    exampleBody: { action: 'disable', mailboxes: ['a@example.com', 'b@example.com'] },
+  },
+  {
     method: 'GET', path: '/api/admin/mailbox-public-links', group: 'adminOperations', auth: 'superAdmin',
     title: l('查询邮箱取码链接状态', 'List mailbox code-link status'),
     description: l('主管理员按邮箱或所属用户搜索并筛选公开取码链接状态。', 'Let the owner search mailboxes or owners and filter public code-link status.'),

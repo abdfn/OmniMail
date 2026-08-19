@@ -8,6 +8,7 @@ import {
 
 const routeFiles = [
   'email-worker/src/api.ts',
+  'email-worker/src/admin-mailbox-routes.ts',
   'email-worker/src/extension-authorization-routes.ts',
   'email-worker/src/icloud-routes.ts',
   'email-worker/src/mail-feature-routes.ts',
@@ -15,7 +16,7 @@ const routeFiles = [
   'email-worker/src/system-version-routes.ts',
 ]
 
-const routePattern = /(?:app|iCloudRoutes|mailFeatureRoutes|outboundRateLimitRoutes|systemVersionRoutes)\.(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"]/g
+const routePattern = /(?:app|adminMailboxRoutes|iCloudRoutes|mailFeatureRoutes|outboundRateLimitRoutes|systemVersionRoutes)\.(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"]/g
 
 function sourceRouteKeys(): string[] {
   return routeFiles.flatMap((filename) => {
@@ -35,7 +36,7 @@ describe('API catalog', () => {
     expect(new Set(source).size).toBe(source.length)
     expect(new Set(documented).size).toBe(documented.length)
     expect(documented).toEqual(source)
-    expect(documented).toHaveLength(105)
+    expect(documented).toHaveLength(108)
   })
 
   it('provides usage details and a callable example for every endpoint', () => {

@@ -164,12 +164,6 @@
   background: var(--surface-hover);
 }
 
-.user-load-more {
-  display: flex;
-  width: calc(100% - 32px);
-  margin: 14px 16px;
-}
-
 .managed-user-row > svg {
   color: var(--text-tertiary);
 }

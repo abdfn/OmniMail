@@ -10,6 +10,7 @@ import { MailboxSwitcher } from './components/MailboxSwitcher'
 import { MailboxHeaderActions } from './components/MailboxHeaderActions'
 import { MailDeleteDialog } from './components/MailDeleteDialog'
 import { MessageList } from './components/MessageList'
+import type { PageSize } from './components/PageSizeSelect'
 import { MessageReader } from './components/MessageReader'
 import { TemporaryInvitePage } from './components/TemporaryInvitePage'
 import {
@@ -57,6 +58,7 @@ function Mailbox({
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set())
   const [messageVersion, setMessageVersion] = useState<number>()
   const [messagePage, setMessagePage] = useState<PageInfo>(emptyPage)
+  const [messagePageSize, setMessagePageSize] = useState<PageSize>(30)
   const [mailboxes, setMailboxes] = useState<MailboxAddress[]>([])
   const [mailboxesLoaded, setMailboxesLoaded] = useState(false)
   const [domains, setDomains] = useState<ManagedDomain[]>([])
@@ -123,7 +125,8 @@ function Mailbox({
     else setListLoading(true)
     setError('')
     try {
-      const result = await api.messages(folder, searchQuery, scope, undefined, quiet ? messageVersion : undefined, signal)
+      const result = await api.messages(folder, searchQuery, scope, messagePageSize,
+        undefined, quiet ? messageVersion : undefined, signal)
       if (requestId !== messageRequestId.current || result.unchanged) return false
       await mailNotifications.track(quiet, result.messages, folder === 'inbox' && !searchQuery && scope.type === 'all')
       if (requestId !== messageRequestId.current) return false
@@ -149,18 +152,14 @@ function Mailbox({
     } finally {
       if (requestId === messageRequestId.current) { setListLoading(false); setRefreshing(false) }
     }
-  }, [folder, mailNotifications.track, messageVersion, nextMessageSignal, onLogout, scope, searchQuery, selectedId])
+  }, [folder, mailNotifications.track, messagePageSize, messageVersion, nextMessageSignal, onLogout, scope, searchQuery, selectedId])
   async function loadMoreMessages() {
     if (!messagePage.hasMore || !messagePage.nextCursor || loadingMore) return
     setLoadingMore(true)
     setError('')
     try {
-      const result = await api.messages(
-        folder,
-        searchQuery,
-        scope,
-        messagePage.nextCursor,
-      )
+      const result = await api.messages(folder, searchQuery, scope, messagePageSize,
+        messagePage.nextCursor)
       if (result.unchanged) return
       setMessages((items) => {
         const existing = new Set(items.map((item) => item.id))
@@ -181,7 +180,7 @@ function Mailbox({
   useEffect(() => {
     setSelectedMessageIds(new Set())
     if (folder !== 'drafts') void loadMessages()
-  }, [folder, searchQuery, scope]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [folder, searchQuery, scope, messagePageSize]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     void loadMailboxData()
   }, [loadMailboxData])
@@ -456,6 +455,7 @@ function Mailbox({
           loading={listLoading} bulkLoading={bulkLoading}
           showMailbox={scope.type !== 'mailbox'}
           page={messagePage} loadingMore={loadingMore}
+          pageSize={messagePageSize} onPageSizeChange={setMessagePageSize}
           onSelect={(message) => void selectMessage(message)}
           onToggleSelection={toggleMessageSelection}
           onSetSelection={toggleMessageSelection}

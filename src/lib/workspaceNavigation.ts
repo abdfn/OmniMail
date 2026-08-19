@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Folder, UserRole } from './api'
 import { isAdminRole } from './roles'
 
-export type AdminView = 'statistics' | 'mail' | 'publicLinks' | 'users' | 'invites' | 'logs' | 'settings' | 'account' | 'api' | 'icloud'
+export type AdminView = 'statistics' | 'mail' | 'mailboxes' | 'users' | 'invites' | 'logs' | 'settings' | 'account' | 'api' | 'icloud'
 
 export type WorkspaceRoute =
   | { kind: 'folder'; folder: Folder; path: string }
@@ -19,7 +19,7 @@ const folderPaths: Record<Folder, string> = {
 const adminPaths: Record<AdminView, string> = {
   statistics: '/admin/statistics',
   mail: '/admin/mail',
-  publicLinks: '/admin/public-links',
+  mailboxes: '/admin/mailboxes',
   users: '/admin/users',
   invites: '/admin/invites',
   logs: '/admin/logs',
@@ -31,7 +31,9 @@ const adminPaths: Record<AdminView, string> = {
 
 function canOpenAdminView(view: AdminView, role: UserRole): boolean {
   if (view === 'account' || view === 'api' || view === 'icloud') return true
-  if (view === 'mail' || view === 'publicLinks') return role === 'super_admin'
+  if (view === 'mail' || view === 'mailboxes') {
+    return role === 'super_admin'
+  }
   return isAdminRole(role)
 }
 

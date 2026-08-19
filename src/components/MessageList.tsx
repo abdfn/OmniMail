@@ -26,6 +26,7 @@ import type { Folder, MessageSummary, PageInfo } from '../lib/api'
 import type { BulkMessageAction } from '../lib/messageActions'
 import { t } from '../lib/i18n'
 import { formatMessageDate, senderLabel } from '../lib/mailFormatting'
+import { PageSizeSelect, type PageSize } from './PageSizeSelect'
 
 type MessageContextMenuState = {
   message: MessageSummary
@@ -227,6 +228,8 @@ export function MessageList({
   showMailbox,
   page,
   loadingMore,
+  pageSize,
+  onPageSizeChange,
   onSelect,
   onToggleSelection,
   onSetSelection,
@@ -244,6 +247,8 @@ export function MessageList({
   showMailbox: boolean
   page: PageInfo
   loadingMore: boolean
+  pageSize: PageSize
+  onPageSizeChange: (value: PageSize) => void
   onSelect: (message: MessageSummary) => void
   onToggleSelection: (message: MessageSummary) => void
   onSetSelection: (message: MessageSummary, selected: boolean) => void
@@ -481,11 +486,14 @@ export function MessageList({
         </button>
       </article>
     ))}
-    {page.hasMore && <button className="button button--secondary message-load-more"
-      type="button" disabled={loadingMore} onClick={onLoadMore}>
-      {loadingMore && <LoaderCircle className="spin" size={15} />}
-      {t(loadingMore ? '正在加载…' : '加载更多邮件')}
-    </button>}
+    <footer className="page-size-footer">
+      <PageSizeSelect value={pageSize} disabled={loadingMore} onChange={onPageSizeChange} />
+      {page.hasMore && <button className="button button--secondary button--small"
+        type="button" disabled={loadingMore} onClick={onLoadMore}>
+        {loadingMore && <LoaderCircle className="spin" size={15} />}
+        {t(loadingMore ? '正在加载…' : '加载更多邮件')}
+      </button>}
+    </footer>
     </div>
   </div>
   {contextMenu && (

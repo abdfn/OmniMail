@@ -4,6 +4,7 @@ import { applySuperAdminRole, createSessionToken, deleteSession, sessionFromUser
 import { clientIp, normalizeEmail, validEmail } from './api-helpers'
 import { deleteAccount, updateAccount } from './account-api'
 import { previewAdminMailCleanup, runAdminMailCleanup } from './admin-mail-cleanup'
+import { adminMailboxRoutes } from './admin-mailbox-routes'
 import { listAuditLogs } from './audit-log-api'
 import { writeAudit } from './audit'
 import { createDomain, deleteDomain, listDomains, updateDomain } from './domain-api'
@@ -455,6 +456,7 @@ app.post('/api/admin/mailbox-public-links/bulk', (context) => bulkManageMailboxP
   context.req.raw,
   clientIp(context.req.raw.headers),
 ))
+adminMailboxRoutes(app)
 app.get('/api/admin/deployment-check', (context) => deploymentCheck(context.env, context.get('user')))
 app.route('/api', systemVersionRoutes)
 app.get('/api/admin/users', (context) => listManagedUsers(

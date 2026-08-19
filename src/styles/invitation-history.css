@@ -39,13 +39,6 @@
   padding: 0 22px 22px;
 }
 
-.invite-load-more {
-  display: flex;
-  width: 100%;
-  grid-column: 1 / -1;
-  margin-top: 14px;
-}
-
 .invite-card {
   display: grid;
   align-content: start;
@@ -202,8 +195,7 @@
     grid-template-columns: 1fr;
   }
 
-  .invite-form-footer,
-  .invite-load-more {
+  .invite-form-footer {
     grid-column: auto;
   }
 }

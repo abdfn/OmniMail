@@ -31,6 +31,7 @@ import { getLocale, t } from '../lib/i18n'
 import { DangerConfirmDialog } from './DangerConfirmDialog'
 import { AdminPageHeader } from './AdminPageHeader'
 import { MessageReader } from './MessageReader'
+import { PageSizeSelect, type PageSize } from './PageSizeSelect'
 
 const initialFilters: AdminMessageFilters = {
   query: '',
@@ -197,6 +198,7 @@ export function AdminMailManagement() {
   const deferredQuery = useDeferredValue(filters.query)
   const [messages, setMessages] = useState<AdminMessageSummary[]>([])
   const [page, setPage] = useState<PageInfo>({ hasMore: false, nextCursor: null, limit: 30 })
+  const [pageSize, setPageSize] = useState<PageSize>(30)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
@@ -215,7 +217,11 @@ export function AdminMailManagement() {
     setLoading(true)
     setError('')
     setSelectedIds(new Set())
-    void api.adminMessages({ ...filters, query: deferredQuery }, controller.signal)
+    void api.adminMessages({
+      ...filters,
+      query: deferredQuery,
+      limit: pageSize,
+    }, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return
         setMessages(result.messages)
@@ -236,6 +242,7 @@ export function AdminMailManagement() {
     filters.mailbox,
     filters.status,
     filters.user,
+    pageSize,
     refreshKey,
   ])
 
@@ -270,6 +277,7 @@ export function AdminMailManagement() {
       const result = await api.adminMessages({
         ...filters,
         query: deferredQuery,
+        limit: pageSize,
         cursor: page.nextCursor,
       })
       setMessages((current) => [...current, ...result.messages])
@@ -396,7 +404,10 @@ export function AdminMailManagement() {
           {loading && <div className="admin-mail-state" role="status"><LoaderCircle className="spin" size={19} />{t('正在读取全站邮件…')}</div>}
           {!loading && messages.length === 0 && <div className="admin-mail-state"><SearchCheck size={20} />{t('当前筛选范围内没有邮件。')}</div>}
         </div>
-        {page.hasMore && <button className="button button--secondary admin-mail-load-more" type="button" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore && <LoaderCircle className="spin" size={15} />}{t(loadingMore ? '正在加载…' : '加载更多邮件')}</button>}
+        <footer className="page-size-footer">
+          <PageSizeSelect value={pageSize} disabled={loading || loadingMore} onChange={setPageSize} />
+          {page.hasMore && <button className="button button--secondary button--small" type="button" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore && <LoaderCircle className="spin" size={15} />}{t(loadingMore ? '正在加载…' : '加载更多邮件')}</button>}
+        </footer>
       </section>
 
       {drawerOpen && <AdminMessageDrawer message={detail} loading={detailLoading} interactionBlocked={Boolean(pending)} onClose={() => setDrawerOpen(false)} onTrash={() => detail && requestAction(detail.folder === 'trash' ? 'delete' : 'trash', [detail.id])} onRestore={() => detail && requestAction('restore', [detail.id])} />}

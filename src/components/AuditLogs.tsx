@@ -24,6 +24,7 @@ import {
 } from '../lib/api'
 import { getLocale, t } from '../lib/i18n'
 import { AdminPageHeader } from './AdminPageHeader'
+import { PageSizeSelect, type PageSize } from './PageSizeSelect'
 
 const categories: Array<{ id: AuditCategory; label: string }> = [
   { id: 'all', label: '全部' },
@@ -63,6 +64,10 @@ const actionLabels: Record<string, string> = {
   'mailbox.create': '创建邮箱',
   'mailbox.enable': '启用邮箱',
   'mailbox.disable': '停用邮箱',
+  'mailbox.bulk_create': '批量创建邮箱',
+  'mailbox.bulk_enable': '批量启用邮箱',
+  'mailbox.bulk_disable': '批量停用邮箱',
+  'mailbox.bulk_delete': '批量删除邮箱',
   'mailbox.public_link.issue': '签发公开取码链接',
   'mailbox.public_link.revoke': '撤销公开取码链接',
   'domain.create': '添加域名',
@@ -230,6 +235,7 @@ function AuditSkeleton() {
 export function AuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [page, setPage] = useState<PageInfo>(emptyPage)
+  const [pageSize, setPageSize] = useState<PageSize>(50)
   const [summary, setSummary] = useState<AuditSummary>(emptySummary)
   const [days, setDays] = useState<AuditDays>(7)
   const [category, setCategory] = useState<AuditCategory>('all')
@@ -247,7 +253,7 @@ export function AuditLogs() {
     setPage(emptyPage)
     setSummary(emptySummary)
     Promise.all([
-      api.auditLogs({ days, category, query: deferredQuery }),
+      api.auditLogs({ days, category, query: deferredQuery, limit: pageSize }),
       loadingDelay(),
     ])
       .then(([result]) => {
@@ -267,7 +273,7 @@ export function AuditLogs() {
     return () => {
       active = false
     }
-  }, [category, days, deferredQuery])
+  }, [category, days, deferredQuery, pageSize])
 
   async function loadMore() {
     if (!page.hasMore || !page.nextCursor || loadingMore) return
@@ -278,6 +284,7 @@ export function AuditLogs() {
         days,
         category,
         query: deferredQuery,
+        limit: pageSize,
         cursor: page.nextCursor,
       })
       setLogs((items) => [...items, ...result.logs])
@@ -380,21 +387,19 @@ export function AuditLogs() {
                 </article>
               ))}
             </div>
-            {page.hasMore && (
-              <button
-                className="button button--secondary audit-load-more"
-                type="button"
-                disabled={loadingMore}
-                onClick={() => void loadMore()}
-              >
-                {loadingMore && <LoaderCircle className="spin" size={15} />}
-                {t(loadingMore ? '正在加载…' : '加载更多日志')}
-              </button>
-            )}
           </>
         ) : !error ? (
           <div className="audit-state"><ScrollText size={22} />{t('当前筛选范围内没有操作记录。')}</div>
         ) : null}
+        <footer className="page-size-footer">
+          <PageSizeSelect value={pageSize} disabled={loading || loadingMore} onChange={setPageSize} />
+          {page.hasMore && (
+            <button className="button button--secondary button--small" type="button" disabled={loadingMore} onClick={() => void loadMore()}>
+              {loadingMore && <LoaderCircle className="spin" size={15} />}
+              {t(loadingMore ? '正在加载…' : '加载更多日志')}
+            </button>
+          )}
+        </footer>
       </section>
     </main>
   )

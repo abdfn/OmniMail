@@ -13,6 +13,7 @@ import { registrationDomainsFromText } from '../lib/registration'
 import { t } from '../lib/i18n'
 import { AccountSettings } from './AccountSettings'
 import { AdminMailManagement } from './AdminMailManagement'
+import { AdminMailboxManagement } from './AdminMailboxManagement'
 import { AdminPageHeader } from './AdminPageHeader'
 import { AuditLogs } from './AuditLogs'
 import { DomainManagement } from './DomainManagement'
@@ -21,7 +22,6 @@ import type { AdminView } from './MailboxSidebar'
 import { MailStatistics } from './MailStatistics'
 import { OutboundRateLimitSettings } from './OutboundRateLimitSettings'
 import { OfficialExtensionSettings } from './OfficialExtensionSettings'
-import { PublicMailboxLinks } from './PublicMailboxLinks'
 import { RandomMailboxSettings } from './RandomMailboxSettings'
 import { StoragePolicySettings } from './StoragePolicySettings'
 import { UserManagement } from './UserManagement'
@@ -197,7 +197,9 @@ export function AdminWorkspace({
   }
   if (view === 'logs') return <AuditLogs />
   if (view === 'mail' && user.role === 'super_admin') return <AdminMailManagement />
-  if (view === 'publicLinks' && user.role === 'super_admin') return <PublicMailboxLinks />
+  if (view === 'mailboxes' && user.role === 'super_admin') {
+    return <AdminMailboxManagement currentUser={user} domains={domains} />
+  }
   if (view === 'account') {
     return <AccountSettings user={user} onUserChange={onUserChange} onLogout={onLogout} onOpenApiGuide={onOpenApiGuide} onOpenICloud={onOpenICloud} />
   }

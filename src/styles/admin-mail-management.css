@@ -351,10 +351,6 @@
   font-size: 12px;
 }
 
-.admin-mail-load-more {
-  margin: 14px auto;
-}
-
 .admin-mail-drawer-backdrop {
   position: fixed;
   z-index: 120;

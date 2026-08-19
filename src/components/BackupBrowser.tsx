@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api, type BackupDrillResult, type BackupObject } from '../lib/api'
 import { errorMessage } from '../lib/errorMessage'
 import { getLocale, t } from '../lib/i18n'
+import { PageSizeSelect, type PageSize } from './PageSizeSelect'
 
 const categories = [
   { value: 'd1/daily/', label: 'D1 每日备份' },
@@ -45,6 +46,7 @@ export function BackupBrowser({ enabled }: { enabled: boolean }) {
   const [prefix, setPrefix] = useState(categories[0].value)
   const [objects, setObjects] = useState<BackupObject[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
+  const [pageSize, setPageSize] = useState<PageSize>(30)
   const [loading, setLoading] = useState(false)
   const [drilling, setDrilling] = useState('')
   const [drill, setDrill] = useState<BackupDrillResult | null>(null)
@@ -55,7 +57,7 @@ export function BackupBrowser({ enabled }: { enabled: boolean }) {
     setLoading(true)
     setError('')
     try {
-      const result = await api.backupObjects(prefix, nextCursor)
+      const result = await api.backupObjects(prefix, nextCursor, pageSize)
       setObjects((current) => nextCursor ? [...current, ...result.objects] : result.objects)
       setCursor(result.page.nextCursor)
     } catch (loadError) {
@@ -63,7 +65,7 @@ export function BackupBrowser({ enabled }: { enabled: boolean }) {
     } finally {
       setLoading(false)
     }
-  }, [enabled, prefix])
+  }, [enabled, pageSize, prefix])
 
   useEffect(() => {
     setObjects([])
@@ -123,12 +125,15 @@ export function BackupBrowser({ enabled }: { enabled: boolean }) {
         ))}
         {!loading && !objects.length && <p>{t('这个分类中暂无备份对象。')}</p>}
       </div>
-      {cursor && (
-        <button className="button button--secondary button--small" type="button"
-          disabled={loading} onClick={() => void load(cursor)}>
-          {loading && <LoaderCircle className="spin" size={14} />}{t('加载更多')}
-        </button>
-      )}
+      <footer className="page-size-footer">
+        <PageSizeSelect value={pageSize} disabled={loading} onChange={setPageSize} />
+        {cursor && (
+          <button className="button button--secondary button--small" type="button"
+            disabled={loading} onClick={() => void load(cursor)}>
+            {loading && <LoaderCircle className="spin" size={14} />}{t('加载更多')}
+          </button>
+        )}
+      </footer>
       {drill && (
         <div className={`backup-drill is-${drill.status}`}>
           <strong>

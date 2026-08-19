@@ -544,6 +544,54 @@ Content-Type: application/json
 `mail/sent/`。演练只读取对象样本并检查 D1 导出、原始邮件或发件正文结构，
 不会导入数据、修改 D1 或覆盖生产对象；执行结果会写入操作日志。
 
+## 主管理员邮箱管理
+
+主管理员可以按创建时间倒序分页查询全站邮箱，并按邮箱、所属用户或状态筛选：
+
+```http
+GET /api/admin/mailboxes?q=&status=all&limit=50&cursor=
+Authorization: Bearer om_at_owner...
+```
+
+批量生成时必须指定现有有效用户的登录邮箱、已启用域名和生成数量：
+
+```http
+POST /api/admin/mailboxes
+Authorization: Bearer om_at_owner...
+Content-Type: application/json
+
+{
+  "ownerEmail": "owner@example.com",
+  "domain": "example.com",
+  "count": 10
+}
+```
+
+`ownerEmail`、`domain` 和 `count` 均为必填字段，`count` 需要在 1–100 之间。
+服务端使用与网页快速生成相同的自然词组格式，并自动跳过已占用和邀请预留地址。
+普通用户和临时用户仍受邮箱额度限制。
+
+批量启用、停用或删除邮箱使用：
+
+```http
+POST /api/admin/mailboxes/bulk
+Authorization: Bearer om_at_owner...
+Content-Type: application/json
+
+{
+  "action": "disable",
+  "mailboxes": ["a@example.com", "b@example.com"]
+}
+```
+
+`action` 必填且只能为 `enable`、`disable` 或 `delete`；`mailboxes` 必填，
+去重后每次最多处理 100 个有效邮箱。主邮箱不能停用或删除；启用邮箱要求所属域名
+仍处于启用状态。删除操作先隐藏邮箱，再通过现有清理工作流异步删除邮件、草稿、
+附件和邮箱记录。每项结果都会返回状态，整批操作写入审计日志。
+
+管理页面还可以把当前选中的最多 100 个邮箱直接提交到公开取码链接接口，生成结果
+仍按每行 `邮箱----取码地址` 一次性显示并支持 TXT 下载。
+
 ## 公开取码链接
 
 主管理员可以为邮箱批量签发、重置或撤销公开取码链接。列表接口支持按邮箱、
@@ -599,9 +647,9 @@ Token 在服务端固定绑定邮箱，接口不接受邮箱参数，也不返�
 `X-Robots-Tag: noindex, nofollow`。公开路径允许任意来源的只读 `GET/OPTIONS`，
 不需要也不会携带登录 Cookie；其他 API 的 CORS 策略不受影响。
 
-管理员页面“取码链接”仅对主管理员显示。签发结果可复制或下载为带 UTF-8 BOM 的
-TXT，每行格式为 `邮箱----取码地址`。关闭一次性结果窗口后不能恢复原 Token，
-需要再次获取时必须重置链接。
+主管理员可在“邮箱管理”页面批量生成或重置取码地址。签发结果可复制或下载为带
+UTF-8 BOM 的 TXT，每行格式为 `邮箱----取码地址`。关闭一次性结果窗口后不能
+恢复原 Token，需要再次获取时必须重置链接。
 
 ## 操作日志
 
@@ -759,6 +807,9 @@ Trigger ID 和 Cloudflare API 原始响应不会返回给浏览器。未配置�
 | `GET /api/admin/messages` | 主管理员查询和筛选全站邮件 |
 | `GET /api/admin/messages/{id}` | 主管理员读取任意用户邮件正文 |
 | `PATCH /api/admin/messages/bulk` | 主管理员批量移入垃圾箱、恢复或永久删除邮件 |
+| `GET /api/admin/mailboxes` | 主管理员分页查询和筛选全站邮箱 |
+| `POST /api/admin/mailboxes` | 主管理员为指定用户批量生成随机邮箱 |
+| `POST /api/admin/mailboxes/bulk` | 主管理员批量启用、停用或删除邮箱 |
 | `GET /api/admin/mailbox-public-links` | 主管理员查询邮箱取码链接状态 |
 | `POST /api/admin/mailbox-public-links/bulk` | 主管理员批量签发、重置或撤销取码链接 |
 | `GET /api/public/mail/{token}` | 通过公开链接读取绑定邮箱的最新六位验证码 |

@@ -135,6 +135,7 @@ export const enCore: Record<string, string> = {
   '添加星标': 'Add star',
   '正在加载…': 'Loading…',
   '加载更多邮件': 'Load more messages',
+  '每页条数': 'Items per page',
   '永久删除这封邮件及其附件？此操作无法撤销。':
     'Permanently delete this message and its attachments? This cannot be undone.',
   '邮件已永久删除': 'Message permanently deleted',

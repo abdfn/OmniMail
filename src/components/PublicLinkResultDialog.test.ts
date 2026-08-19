@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { publicLinkResultText } from './PublicMailboxLinks'
+import { publicLinkResultText } from './PublicLinkResultDialog'
 
 describe('public mailbox link export', () => {
   it('uses the requested mailbox separator and skips results without a new token', () => {

@@ -6,8 +6,8 @@ import {
   Inbox,
   Cloud,
   Link2,
-  KeyRound,
   LogOut,
+  Mails,
   ScrollText,
   SearchCheck,
   Send,
@@ -48,7 +48,7 @@ const adminItems: Array<{
 }> = [
   { id: 'statistics', label: '统计', icon: BarChart3 },
   { id: 'mail', label: '邮件管理', icon: SearchCheck, superAdminOnly: true },
-  { id: 'publicLinks', label: '取码链接', icon: KeyRound, superAdminOnly: true },
+  { id: 'mailboxes', label: '邮箱管理', icon: Mails, superAdminOnly: true },
   { id: 'users', label: '用户', icon: Users },
   { id: 'invites', label: '邀请', icon: Link2 },
   { id: 'logs', label: '操作日志', icon: ScrollText },
