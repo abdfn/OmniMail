@@ -40,17 +40,20 @@ describe('legacy D1 deployment bootstrap', () => {
     expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'users'").get()).toEqual({
       name: 'users',
     })
-    expect(db.prepare('SELECT COUNT(*) AS count FROM d1_migrations').get()).toEqual({ count: 21 })
+    expect(db.prepare('SELECT COUNT(*) AS count FROM d1_migrations').get()).toEqual({ count: 22 })
     expect(db.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'icloud_accounts'",
     ).get()).toEqual({ name: 'icloud_accounts' })
+    expect(db.prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'mailbox_public_links'",
+    ).get()).toEqual({ name: 'mailbox_public_links' })
   })
 
   it.each([
     [14, '2026-07-29-p5-outbound-rate-limit-admin'],
     [16, '2026-08-01-p2-translation-permissions'],
     [17, '2026-08-03-p3-multiple-drafts'],
-  ])('baselines legacy migration %i and applies through 0021', (position, version) => {
+  ])('baselines legacy migration %i and applies through 0022', (position, version) => {
     const db = legacyDatabase(position, version)
     db.exec(bootstrap)
 
@@ -58,13 +61,37 @@ describe('legacy D1 deployment bootstrap', () => {
       count: position,
     })
     applyMigrations(db, position + 1)
-    expect(db.prepare('SELECT COUNT(*) AS count FROM d1_migrations').get()).toEqual({ count: 21 })
+    expect(db.prepare('SELECT COUNT(*) AS count FROM d1_migrations').get()).toEqual({ count: 22 })
     expect(db.prepare(
       "SELECT name FROM pragma_table_info('device_sessions') WHERE name = 'scopes'",
     ).get()).toEqual({ name: 'scopes' })
     expect(db.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'icloud_accounts'",
     ).get()).toEqual({ name: 'icloud_accounts' })
+    expect(db.prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'mailbox_public_links'",
+    ).get()).toEqual({ name: 'mailbox_public_links' })
+  })
+
+  it('creates the public-link index and cascades links when a mailbox is deleted', () => {
+    const db = new DatabaseSync(':memory:')
+    db.exec(bootstrap)
+    applyMigrations(db, 1)
+    db.exec(`
+      INSERT INTO users (id, email, display_name, password_hash)
+      VALUES ('owner-1', 'owner@example.com', 'Owner', 'hash');
+      INSERT INTO mailboxes (address, user_id)
+      VALUES ('code@example.com', 'owner-1');
+      INSERT INTO mailbox_public_links (mailbox_address, token_hash, created_by)
+      VALUES ('code@example.com', 'token-hash', 'owner-1');
+      DELETE FROM mailboxes WHERE address = 'code@example.com';
+    `)
+
+    expect(db.prepare(
+      "SELECT name FROM pragma_index_list('mailbox_public_links') WHERE name = 'idx_mailbox_public_links_token' AND \"unique\" = 1",
+    ).get()).toEqual({ name: 'idx_mailbox_public_links_token' })
+    expect(db.prepare('SELECT COUNT(*) AS count FROM mailbox_public_links').get())
+      .toEqual({ count: 0 })
   })
 
   it('does not baseline an unknown legacy schema', () => {

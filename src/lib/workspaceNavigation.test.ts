@@ -19,6 +19,10 @@ describe('workspace routes', () => {
       kind: 'admin',
       view: 'mail',
     })
+    expect(workspaceRoute('/admin/public-links', 'super_admin')).toMatchObject({
+      kind: 'admin',
+      view: 'publicLinks',
+    })
     expect(workspaceRoute('/settings/account/', 'user')).toMatchObject({
       kind: 'admin',
       view: 'account',
@@ -40,6 +44,11 @@ describe('workspace routes', () => {
       path: '/mail/inbox',
     })
     expect(workspaceRoute('/admin/mail', 'admin')).toMatchObject({
+      kind: 'folder',
+      folder: 'inbox',
+      path: '/mail/inbox',
+    })
+    expect(workspaceRoute('/admin/public-links', 'admin')).toMatchObject({
       kind: 'folder',
       folder: 'inbox',
       path: '/mail/inbox',

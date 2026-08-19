@@ -81,6 +81,21 @@ export const iCloudEndpoints: ApiEndpoint[] = [
 
 export const adminOperationEndpoints: ApiEndpoint[] = [
   {
+    method: 'GET', path: '/api/admin/mailbox-public-links', group: 'adminOperations', auth: 'superAdmin',
+    title: l('查询邮箱取码链接状态', 'List mailbox code-link status'),
+    description: l('主管理员按邮箱或所属用户搜索并筛选公开取码链接状态。', 'Let the owner search mailboxes or owners and filter public code-link status.'),
+    request: 'Query · q?, status=all|enabled|disabled, limit?, cursor?', response: '200 · { mailboxes, page }',
+    examplePath: '/api/admin/mailbox-public-links?status=all&limit=50',
+  },
+  {
+    method: 'POST', path: '/api/admin/mailbox-public-links/bulk', group: 'adminOperations', auth: 'superAdmin',
+    title: l('批量签发或撤销取码链接', 'Bulk issue or revoke code links'),
+    description: l('主管理员为最多 100 个邮箱签发、重置或撤销公开取码链接。', 'Let the owner issue, reset, or revoke public code links for up to 100 mailboxes.'),
+    request: 'JSON · action=issue|revoke, mailboxes[1..100]', response: '200 · { results }',
+    exampleBody: { action: 'issue', mailboxes: ['a@example.com', 'b@example.com'] },
+    notes: [l('签发响应中的 Token 明文只返回一次；审计日志不会保存 Token 或完整链接。', 'Plaintext tokens are returned only once when issued. Audit logs do not store tokens or full links.')],
+  },
+  {
     method: 'GET', path: '/api/admin/audit-logs', group: 'adminOperations', auth: 'admin',
     title: l('查询操作日志', 'Query audit logs'),
     description: l('按时间、类别和关键词查询脱敏审计记录并游标分页。', 'Query sanitized audit records by time, category, and keyword with cursor pagination.'),

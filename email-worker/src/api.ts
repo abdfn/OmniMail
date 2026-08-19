@@ -23,6 +23,7 @@ import { isAllowedOrigin, isOfficialChromeExtensionOrigin } from './origin-polic
 import { iCloudRoutes } from './icloud-routes'
 import { authenticatePassword } from './password-login'
 import { publicConfig } from './public-config'
+import { bulkManageMailboxPublicLinks, listMailboxPublicLinks, publicMailboxCode } from './public-mail-api'
 import { proxyRemoteImage } from './remote-image'
 import { handleResendWebhook } from './resend-webhook'
 import { outboundRateLimitRoutes } from './outbound-rate-limit-routes'
@@ -67,6 +68,10 @@ const PUBLIC_PATHS = new Set([
   '/api/auth/linux-do/callback',
   '/api/webhooks/resend',
 ])
+
+function isPublicMailboxRead(path: string, method: string): boolean {
+  return method === 'GET' && /^\/api\/public\/mail\/[^/]+$/.test(path)
+}
 
 export type AppContext = {
   Bindings: Env
@@ -127,6 +132,7 @@ function configuredSuperAdminEmail(env: Env): string {
 
 app.use('*', async (context, next) => {
   const requestOrigin = context.req.header('Origin')
+  const publicMailboxRead = isPublicMailboxRead(context.req.path, context.req.method)
   const officialEnabled = isOfficialChromeExtensionOrigin(requestOrigin)
     ? await officialExtensionEnabled(context.env.DB)
     : false
@@ -138,6 +144,14 @@ app.use('*', async (context, next) => {
   )
 
   if (context.req.method === 'OPTIONS') {
+    if (/^\/api\/public\/mail\/[^/]+$/.test(context.req.path)) {
+      const response = new Response(null, { status: 204 })
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS')
+      response.headers.set('Access-Control-Max-Age', '86400')
+      response.headers.append('Vary', 'Origin')
+      return response
+    }
     if (!originAllowed) return context.json({ error: 'Origin is not allowed.' }, 403)
     const response = new Response(null, { status: 204 })
     if (requestOrigin) response.headers.set('Access-Control-Allow-Origin', requestOrigin)
@@ -149,11 +163,15 @@ app.use('*', async (context, next) => {
     return response
   }
 
-  if (!originAllowed) return context.json({ error: 'Origin is not allowed.' }, 403)
+  if (!originAllowed && !publicMailboxRead) return context.json({ error: 'Origin is not allowed.' }, 403)
   await next()
 
-  if (requestOrigin) context.header('Access-Control-Allow-Origin', requestOrigin)
-  context.header('Access-Control-Allow-Credentials', 'true')
+  if (publicMailboxRead) {
+    context.header('Access-Control-Allow-Origin', '*')
+  } else {
+    if (requestOrigin) context.header('Access-Control-Allow-Origin', requestOrigin)
+    context.header('Access-Control-Allow-Credentials', 'true')
+  }
   context.header('Vary', 'Origin', { append: true })
   context.header('X-Content-Type-Options', 'nosniff')
   context.header('Referrer-Policy', 'no-referrer')
@@ -164,7 +182,11 @@ app.use('*', async (context, next) => {
 app.use('/api/*', async (context, next) => {
   await ensureSchema(context.env.DB)
   await syncSuperAdminIdentity(context.env, configuredSuperAdminEmail(context.env))
-  if (PUBLIC_PATHS.has(context.req.path) || context.req.path.startsWith('/api/invitations/')) {
+  if (
+    PUBLIC_PATHS.has(context.req.path)
+    || context.req.path.startsWith('/api/invitations/')
+    || isPublicMailboxRead(context.req.path, context.req.method)
+  ) {
     await next()
     return
   }
@@ -200,6 +222,12 @@ app.use('/api/*', async (context, next) => {
 app.get('/api/health', (context) => context.json({ ok: true }))
 
 app.get('/api/config', async (context) => context.json(await publicConfig(context.env)))
+
+app.get('/api/public/mail/:token', (context) => publicMailboxCode(
+  context.env,
+  context.req.raw,
+  context.req.param('token'),
+))
 
 app.get('/api/auth/linux-do', async (context) => {
   const result = await beginLinuxDoAuth(context.env, context.req.raw)
@@ -416,6 +444,17 @@ app.post('/api/admin/mail-cleanup', (context) => runAdminMailCleanup(
   clientIp(context.req.raw.headers),
 ))
 app.get('/api/admin/audit-logs', (context) => listAuditLogs(context.env, context.get('user'), context.req.raw))
+app.get('/api/admin/mailbox-public-links', (context) => listMailboxPublicLinks(
+  context.env,
+  context.get('user'),
+  context.req.raw,
+))
+app.post('/api/admin/mailbox-public-links/bulk', (context) => bulkManageMailboxPublicLinks(
+  context.env,
+  context.get('user'),
+  context.req.raw,
+  clientIp(context.req.raw.headers),
+))
 app.get('/api/admin/deployment-check', (context) => deploymentCheck(context.env, context.get('user')))
 app.route('/api', systemVersionRoutes)
 app.get('/api/admin/users', (context) => listManagedUsers(

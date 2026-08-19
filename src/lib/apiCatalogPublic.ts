@@ -14,6 +14,14 @@ export const systemEndpoints: ApiEndpoint[] = [
     request: 'No parameters', response: '200 · AppConfig',
   },
   {
+    method: 'GET', path: '/api/public/mail/:token', group: 'system', auth: 'public',
+    title: l('通过公开链接读取最新验证码', 'Read the latest code through a public link'),
+    description: l('使用链接 Token 查询其固定绑定邮箱最近来信中的六位验证码。', 'Use a link token to read a six-digit code from recent mail in its fixed bound mailbox.'),
+    request: 'Path · token', response: '200 · { email, code, from, subject, time }',
+    examplePath: '/api/public/mail/PUBLIC_TOKEN',
+    notes: [l('每个 Token 每分钟最多请求 60 次；接口不返回正文、附件或邮件列表。', 'Each token allows up to 60 requests per minute. The endpoint does not return message bodies, attachments, or lists.')],
+  },
+  {
     method: 'POST', path: '/api/setup', group: 'system', auth: 'public',
     title: l('首次初始化主管理员', 'Complete first-time owner setup'),
     description: l('仅在实例未初始化时创建主管理员并写入登录 Cookie。', 'Create the owner and set a login cookie only while the instance is uninitialized.'),

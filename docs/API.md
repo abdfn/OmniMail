@@ -540,6 +540,65 @@ Content-Type: application/json
 `mail/sent/`。演练只读取对象样本并检查 D1 导出、原始邮件或发件正文结构，
 不会导入数据、修改 D1 或覆盖生产对象；执行结果会写入操作日志。
 
+## 公开取码链接
+
+主管理员可以为邮箱批量签发、重置或撤销公开取码链接。列表接口支持按邮箱、
+所属用户搜索，并按是否已生成链接筛选：
+
+```http
+GET /api/admin/mailbox-public-links?q=&status=all&limit=50&cursor=
+Authorization: Bearer om_at_owner...
+
+POST /api/admin/mailbox-public-links/bulk
+Authorization: Bearer om_at_owner...
+Content-Type: application/json
+
+{
+  "action": "issue",
+  "mailboxes": ["a@example.com", "b@example.com"]
+}
+```
+
+`action` 必填且只能是 `issue` 或 `revoke`；`mailboxes` 必填、去重后处理，
+每次最少 1 个、最多 100 个有效完整邮箱地址。`issue` 会为未签发邮箱创建链接，
+并重置已有链接，因此旧地址立即失效。签发成功结果中的 `publicUrl` 只返回一次，
+Worker 只保存随机 Token 的 SHA-256 哈希。撤销不会返回 Token。批量操作写入审计日志，
+但日志不保存 Token、验证码或完整取码地址。
+
+公开调用方直接访问签发结果中的地址，不需要登录：
+
+```http
+GET /api/public/mail/{token}
+```
+
+成功响应：
+
+```json
+{
+  "email": "a@example.com",
+  "code": "123456",
+  "from": "noreply@example.com",
+  "subject": "Your verification code",
+  "time": "2026-08-19T10:20:30.000Z"
+}
+```
+
+Token 在服务端固定绑定邮箱，接口不接受邮箱参数，也不返回正文、附件、原始邮件、
+邮件列表或任何写操作。Worker 仅检查该邮箱最近 10 封 `incoming + inbox + ready`
+邮件，按时间倒序从主题、预览、纯文本和清理后的 HTML 中提取六位验证码。
+当前没有可提取验证码时仍返回 `200`，其中 `code`、`from`、`subject`、`time`
+均为 `null`，调用方可以继续轮询。
+
+每个 Token 每分钟最多请求 60 次，第 61 次返回 `429` 和 `Retry-After`，下一分钟
+自动恢复。邮箱停用或隐藏，以及所属用户停用、删除或临时账号到期时统一返回 `404`。
+响应包含 `Cache-Control: no-store`、`Referrer-Policy: no-referrer` 和
+`X-Robots-Tag: noindex, nofollow`。公开路径允许任意来源的只读 `GET/OPTIONS`，
+不需要也不会携带登录 Cookie；其他 API 的 CORS 策略不受影响。
+
+管理员页面“取码链接”仅对主管理员显示。签发结果可复制或下载为带 UTF-8 BOM 的
+TXT，每行格式为 `邮箱----取码地址`。关闭一次性结果窗口后不能恢复原 Token，
+需要再次获取时必须重置链接。
+
 ## 操作日志
 
 管理员可以读取登录安全和重要业务操作：
@@ -653,7 +712,7 @@ Trigger ID 和 Cloudflare API 原始响应不会返回给浏览器。未配置�
 ## 完整接口目录与覆盖检查
 
 登录 Webmail 后打开 `/settings/api` 可以查看当前版本的完整接口目录。该页面按模块
-列出 Worker 暴露的全部 102 个 HTTP 端点；每个端点都包含认证要求、请求参数、成功
+列出 Worker 暴露的全部 105 个 HTTP 端点；每个端点都包含认证要求、请求参数、成功
 响应、限制说明和按当前实例地址生成的 cURL 示例，并支持按方法、路径、用途和字段搜索。
 
 测试 `src/lib/apiCatalog.test.ts` 会直接从 `api.ts`、扩展授权路由及各子路由文件提取
@@ -696,6 +755,9 @@ Trigger ID 和 Cloudflare API 原始响应不会返回给浏览器。未配置�
 | `GET /api/admin/messages` | 主管理员查询和筛选全站邮件 |
 | `GET /api/admin/messages/{id}` | 主管理员读取任意用户邮件正文 |
 | `PATCH /api/admin/messages/bulk` | 主管理员批量移入垃圾箱、恢复或永久删除邮件 |
+| `GET /api/admin/mailbox-public-links` | 主管理员查询邮箱取码链接状态 |
+| `POST /api/admin/mailbox-public-links/bulk` | 主管理员批量签发、重置或撤销取码链接 |
+| `GET /api/public/mail/{token}` | 通过公开链接读取绑定邮箱的最新六位验证码 |
 | `GET /api/admin/mail-cleanup/preview` | 按范围、类型和邮件时间预估清理影响 |
 | `POST /api/admin/mail-cleanup` | 经数量复核后每批永久清理最多 50 封邮件 |
 | `GET /api/admin/audit-logs` | 管理员操作日志、筛选与游标分页 |

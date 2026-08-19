@@ -21,6 +21,7 @@ import type { AdminView } from './MailboxSidebar'
 import { MailStatistics } from './MailStatistics'
 import { OutboundRateLimitSettings } from './OutboundRateLimitSettings'
 import { OfficialExtensionSettings } from './OfficialExtensionSettings'
+import { PublicMailboxLinks } from './PublicMailboxLinks'
 import { RandomMailboxSettings } from './RandomMailboxSettings'
 import { StoragePolicySettings } from './StoragePolicySettings'
 import { UserManagement } from './UserManagement'
@@ -196,6 +197,7 @@ export function AdminWorkspace({
   }
   if (view === 'logs') return <AuditLogs />
   if (view === 'mail' && user.role === 'super_admin') return <AdminMailManagement />
+  if (view === 'publicLinks' && user.role === 'super_admin') return <PublicMailboxLinks />
   if (view === 'account') {
     return <AccountSettings user={user} onUserChange={onUserChange} onLogout={onLogout} onOpenApiGuide={onOpenApiGuide} onOpenICloud={onOpenICloud} />
   }

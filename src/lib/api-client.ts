@@ -34,6 +34,10 @@ import type {
   MessageTranslation,
   MessageSummary,
   PageInfo,
+  PublicMailboxLink,
+  PublicMailboxLinkAction,
+  PublicMailboxLinkResult,
+  PublicMailboxLinkStatus,
   OutboundRateLimitSettings,
   OutboundRateLimitState,
   RegistrationDomainPolicy,
@@ -405,6 +409,27 @@ export const api = {
   revokeTemporaryInvite: (id: string) => request<{ ok: true }>(
     `/api/admin/invites/${id}/revoke`,
     { method: 'PATCH' },
+  ),
+  mailboxPublicLinks: (
+    query: string,
+    status: PublicMailboxLinkStatus,
+    cursor?: string,
+  ) => {
+    const search = new URLSearchParams({ limit: '50', status })
+    if (query.trim()) search.set('q', query.trim())
+    if (cursor) search.set('cursor', cursor)
+    return request<{ mailboxes: PublicMailboxLink[]; page: PageInfo }>(
+      `/api/admin/mailbox-public-links?${search}`,
+    )
+  },
+  manageMailboxPublicLinks: (
+    action: PublicMailboxLinkAction,
+    mailboxes: string[],
+  ) => request<{ results: PublicMailboxLinkResult[] }>(
+    '/api/admin/mailbox-public-links/bulk', {
+      method: 'POST',
+      body: jsonBody({ action, mailboxes }),
+    },
   ),
   temporaryInvite: (token: string) => request<{ invite: TemporaryInvite }>(
     `/api/invitations/${encodeURIComponent(token)}`,

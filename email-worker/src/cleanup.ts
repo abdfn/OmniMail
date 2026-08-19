@@ -178,6 +178,8 @@ export async function cleanup(env: Env): Promise<void> {
       .bind(now - 2 * 24 * 60 * 60),
     env.DB.prepare('DELETE FROM outbound_rate_limits WHERE updated_at < ?')
       .bind(now - 2 * 24 * 60 * 60),
+    env.DB.prepare('DELETE FROM public_mail_rate_limits WHERE updated_at < ?')
+      .bind(now - 24 * 60 * 60),
   ])
   try {
     await enqueueMissingMessageSearch(env)

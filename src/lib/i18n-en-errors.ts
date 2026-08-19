@@ -77,6 +77,18 @@ export const enErrors: Record<string, string> = {
   '随机邮箱前缀格式无效。': 'The random mailbox prefix is invalid.',
   '邮件分页游标无效。': 'The message cursor is invalid.',
   '邮箱筛选条件无效。': 'The mailbox filter is invalid.',
+  '只有主管理员可以管理公开取码链接。':
+    'Only the owner can manage public code links.',
+  '取码链接筛选条件无效。': 'The code-link filter is invalid.',
+  '邮箱分页游标无效。': 'The mailbox cursor is invalid.',
+  'action 必填且只能是 issue 或 revoke。':
+    'Action is required and must be issue or revoke.',
+  'mailboxes 必填，且单次需要选择 1–100 个邮箱。':
+    'Mailboxes is required and must contain between 1 and 100 addresses.',
+  'mailboxes 包含无效邮箱地址。': 'Mailboxes contains an invalid email address.',
+  '取码地址不存在或已失效。': 'The code link does not exist or has expired.',
+  '取码请求过于频繁，请稍后重试。':
+    'Too many code requests. Try again shortly.',
   '登录尝试过多，请 15 分钟后再试。':
     'Too many sign-in attempts. Try again in 15 minutes.',
   '邮箱或密码不正确。': 'The email or password is incorrect.',

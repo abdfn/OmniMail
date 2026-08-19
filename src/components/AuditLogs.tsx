@@ -63,6 +63,8 @@ const actionLabels: Record<string, string> = {
   'mailbox.create': '创建邮箱',
   'mailbox.enable': '启用邮箱',
   'mailbox.disable': '停用邮箱',
+  'mailbox.public_link.issue': '签发公开取码链接',
+  'mailbox.public_link.revoke': '撤销公开取码链接',
   'domain.create': '添加域名',
   'domain.enable': '启用域名',
   'domain.disable': '停用域名',

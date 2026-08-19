@@ -245,6 +245,28 @@ export interface PageInfo {
   limit: number
 }
 
+export type PublicMailboxLinkStatus = 'all' | 'enabled' | 'disabled'
+
+export interface PublicMailboxLink {
+  email: string
+  isActive: boolean
+  linkEnabled: boolean
+  linkCreatedAt: number | null
+  owner: {
+    id: string
+    email: string
+    displayName: string
+  }
+}
+
+export type PublicMailboxLinkAction = 'issue' | 'revoke'
+
+export interface PublicMailboxLinkResult {
+  email: string
+  status: 'issued' | 'revoked' | 'not_found'
+  publicUrl?: string
+}
+
 export interface AdminUserTotals {
   total: number
   active: number
