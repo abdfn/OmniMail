@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  availableAddresses,
   bulkManageAdminMailboxes,
   createAdminMailboxes,
   listAdminMailboxes,
@@ -92,7 +93,12 @@ describe('admin mailbox bulk creation', () => {
         statements.push(entry)
         const statement = {
           sql,
-          bind(...bindings: unknown[]) { entry.bindings = bindings; return statement },
+          bindings: [] as unknown[],
+          bind(...bindings: unknown[]) {
+            entry.bindings = bindings
+            statement.bindings = bindings
+            return statement
+          },
           first: async () => {
             if (sql.includes('FROM users u')) return {
               id: 'user-1', email: 'user@example.com', display_name: 'User',
@@ -108,10 +114,12 @@ describe('admin mailbox bulk creation', () => {
         }
         return statement
       },
-      batch: async (prepared: Array<{ sql: string }>) => prepared.map(() => ({
+      batch: async (prepared: Array<{ sql: string; bindings: unknown[] }>) => prepared.map((item) => ({
         success: true,
-        meta: { changes: 1 },
-        results: [],
+        meta: { changes: item.bindings.length / 3 },
+        results: item.sql.includes('INSERT OR IGNORE')
+          ? item.bindings.filter((_, index) => index % 3 === 0).map((address) => ({ address }))
+          : [],
       })),
     }
     const response = await createAdminMailboxes(
@@ -134,6 +142,33 @@ describe('admin mailbox bulk creation', () => {
 
   it('uses the same readable local-part shape as quick generation', () => {
     expect(randomMailboxLocalPart()).toMatch(/^[a-z0-9]+[._-][a-z0-9]+(?:[._-][0-9][a-z])?$/)
+  })
+
+  it('keeps candidate lookups within the D1 bound-parameter limit', async () => {
+    const bindingCounts: number[] = []
+    const database = {
+      prepare() {
+        const statement = {
+          bind(...bindings: unknown[]) {
+            bindingCounts.push(bindings.length)
+            return statement
+          },
+          all: async () => ({ results: [] }),
+        }
+        return statement
+      },
+    }
+
+    const addresses = await availableAddresses(
+      { DB: database } as unknown as Env,
+      'example.com',
+      '',
+      100,
+    )
+
+    expect(addresses).toHaveLength(100)
+    expect(bindingCounts.length).toBeGreaterThan(1)
+    expect(Math.max(...bindingCounts)).toBeLessThanOrEqual(100)
   })
 })
 

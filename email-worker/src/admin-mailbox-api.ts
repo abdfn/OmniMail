@@ -9,6 +9,7 @@ import type { Env, SessionUser, UserRole } from './types'
 const STATUS_FILTERS = new Set(['all', 'enabled', 'disabled'])
 const BULK_ACTIONS = new Set(['enable', 'disable', 'delete'])
 const MAX_BATCH_MAILBOXES = 100
+const D1_MAX_BOUND_PARAMETERS = 100
 
 type AdminMailboxRow = {
   address: string
@@ -55,6 +56,14 @@ function requireSuperAdmin(user: SessionUser): Response | null {
 
 function placeholders(count: number): string {
   return Array.from({ length: count }, () => '?').join(', ')
+}
+
+function chunksOf<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size))
+  }
+  return chunks
 }
 
 function mailboxDomain(address: string): string {
@@ -165,7 +174,7 @@ async function targetUser(env: Env, ownerEmail: string): Promise<TargetUserRow |
   ).bind(ownerEmail).first<TargetUserRow>()
 }
 
-async function availableAddresses(
+export async function availableAddresses(
   env: Env,
   domain: string,
   prefix: string,
@@ -176,16 +185,43 @@ async function availableAddresses(
     candidates.add(`${randomMailboxLocalPart(prefix)}@${domain}`)
   }
   const addresses = [...candidates]
-  const marks = placeholders(addresses.length)
-  const { results } = await env.DB.prepare(
-    `SELECT address AS value FROM mailboxes WHERE address IN (${marks})
-     UNION
-     SELECT assigned_address AS value FROM temporary_invites
-      WHERE assigned_address IN (${marks}) AND address_mode = 'assigned'
-        AND revoked_at IS NULL AND expires_at > unixepoch() AND use_count = 0`,
-  ).bind(...addresses, ...addresses).all<{ value: string }>()
-  const unavailable = new Set(results.map((row) => normalizeEmail(row.value)))
+  // 候选地址只绑定一次并分块，避免超过 D1 单条查询 100 个绑定参数的限制
+  const results = await Promise.all(chunksOf(addresses, D1_MAX_BOUND_PARAMETERS).map(
+    async (chunk) => env.DB.prepare(
+      `WITH candidates(value) AS (VALUES ${chunk.map(() => '(?)').join(', ')})
+       SELECT c.value
+         FROM candidates c
+        WHERE EXISTS (SELECT 1 FROM mailboxes m WHERE m.address = c.value)
+           OR EXISTS (
+             SELECT 1 FROM temporary_invites i
+              WHERE i.assigned_address = c.value AND i.address_mode = 'assigned'
+                AND i.revoked_at IS NULL AND i.expires_at > unixepoch() AND i.use_count = 0
+           )`,
+    ).bind(...chunk).all<{ value: string }>(),
+  ))
+  const unavailable = new Set(results.flatMap((result) => result.results)
+    .map((row) => normalizeEmail(row.value)))
   return addresses.filter((address) => !unavailable.has(address)).slice(0, count)
+}
+
+async function insertMailboxes(
+  env: Env,
+  addresses: string[],
+  userId: string,
+  now: number,
+): Promise<string[]> {
+  const bindingsPerMailbox = 3
+  const chunkSize = Math.floor(D1_MAX_BOUND_PARAMETERS / bindingsPerMailbox)
+  const statements = chunksOf(addresses, chunkSize).map((chunk) => {
+    const bindings = chunk.flatMap((address) => [address, userId, now])
+    return env.DB.prepare(
+      `INSERT OR IGNORE INTO mailboxes (address, user_id, is_primary, is_active, created_at)
+       VALUES ${chunk.map(() => '(?, ?, 0, 1, ?)').join(', ')}
+       RETURNING address`,
+    ).bind(...bindings)
+  })
+  const results = await env.DB.batch<{ address: string }>(statements)
+  return results.flatMap((result) => result.results || []).map((row) => row.address)
 }
 
 /** 为指定用户批量生成随机邮箱 */
@@ -233,11 +269,7 @@ export async function createAdminMailboxes(
   const addresses = await availableAddresses(env, domain, setting?.value || '', count)
   if (addresses.length !== count) return json({ error: '随机邮箱生成冲突，请重试。' }, 409)
 
-  const insertResults = await env.DB.batch(addresses.map((address) => env.DB.prepare(
-    `INSERT OR IGNORE INTO mailboxes (address, user_id, is_primary, is_active, created_at)
-     VALUES (?, ?, 0, 1, ?)`,
-  ).bind(address, owner.id, now)))
-  const created = addresses.filter((_, index) => Number(insertResults[index]?.meta.changes || 0) > 0)
+  const created = await insertMailboxes(env, addresses, owner.id, now)
   if (!created.length) return json({ error: '随机邮箱生成冲突，请重试。' }, 409)
 
   // 首次批量创建时确保用户始终有且只有一个主邮箱
