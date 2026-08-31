@@ -106,8 +106,8 @@ export const enAdmin: Record<string, string> = {
   '域名已添加并允许创建邮箱。': 'Domain added and mailbox creation enabled.',
   '域名已停止创建新邮箱。': 'New mailbox creation is disabled for this domain.',
   '域名已重新启用。': 'Domain enabled again.',
-  '域名配置已删除，已有邮箱和邮件仍然保留。':
-    'Domain configuration deleted. Existing mailboxes and messages remain.',
+  '域名及 {count} 个关联邮箱已进入后台删除流程。':
+    'The domain and {count} associated mailboxes are queued for background deletion.',
   '域名配置已删除。': 'Domain configuration deleted.',
   '域名管理': 'Domain management',
   '启用或停用新邮箱创建；删除配置前会展示影响范围':
@@ -116,6 +116,7 @@ export const enAdmin: Record<string, string> = {
   '{count} 个邮箱地址': '{count} mailboxes',
   '允许创建': 'Creation enabled',
   '已停用': 'Disabled',
+  '正在删除': 'Deleting',
   '删除域名配置': 'Delete domain configuration',
   '删除': 'Delete',
   '还没有配置可创建邮箱的域名。':
@@ -125,11 +126,12 @@ export const enAdmin: Record<string, string> = {
   '操作没有完成': 'Action not completed',
   '操作成功': 'Action completed',
   '删除 {domain}？': 'Delete {domain}?',
-  '请先确认删除后的影响。这个操作只删除 OmniMail 中的域名管理配置。':
-    'Review the impact first. This only removes the domain configuration from OmniMail.',
-  '{count} 个已有邮箱会保留': '{count} existing mailboxes will remain',
-  '邮箱地址、历史邮件和附件不会被删除，并且仍可继续查看。':
-    'Mailbox addresses, message history, and attachments are not deleted and remain viewable.',
+  '请先确认删除后的影响。提交后将由后台任务永久清理域名及其关联数据。':
+    'Review the impact first. A background task will permanently remove the domain and its associated data.',
+  '{count} 个关联邮箱将被删除': '{count} associated mailboxes will be deleted',
+  '邮箱地址、历史邮件、草稿、附件和取码地址将被永久清理。':
+    'Mailbox addresses, message history, drafts, attachments, and public links will be permanently removed.',
+  '输入 {domain} 确认永久删除': 'Enter {domain} to confirm permanent deletion',
   '相关邀请链接会失效': 'Related invitation links will stop working',
   '使用该域名且尚未注册的邀请将无法继续使用。':
     'Unused invitations for this domain can no longer be used.',
@@ -192,6 +194,8 @@ export const enAdmin: Record<string, string> = {
   '启用域名': 'Domain enabled',
   '停用域名': 'Domain disabled',
   '删除域名': 'Domain deleted',
+  '提交域名删除': 'Scheduled domain deletion',
+  '完成域名删除': 'Completed domain deletion',
   '创建邀请': 'Invitation created',
   '撤销邀请': 'Invitation revoked',
   '通过邀请注册': 'Registered with invitation',

@@ -3,6 +3,7 @@ import type { Env, SessionUser } from './types'
 interface DomainRow {
   name: string
   is_active: number
+  is_deleting: number
   mailbox_count: number
   created_at: number
   updated_at: number
@@ -43,6 +44,7 @@ function domainJson(row: DomainRow) {
   return {
     name: row.name,
     isActive: Boolean(row.is_active),
+    isDeleting: Boolean(row.is_deleting),
     mailboxCount: row.mailbox_count,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -65,8 +67,11 @@ async function audit(
 async function domainRow(env: Env, name: string): Promise<DomainRow | null> {
   return env.DB.prepare(
     `SELECT d.name, d.is_active, d.created_at, d.updated_at,
+            EXISTS(SELECT 1 FROM settings s
+                    WHERE s.key = 'domain_deleting:' || d.name) AS is_deleting,
             (SELECT COUNT(*) FROM mailboxes m
               WHERE LOWER(SUBSTR(m.address, INSTR(m.address, '@') + 1)) = d.name
+                AND m.is_hidden = 0
             ) AS mailbox_count
        FROM domains d
       WHERE d.name = ?`,
@@ -77,8 +82,11 @@ export async function listDomains(env: Env, user: SessionUser): Promise<Response
   const condition = isAdministrator(user) ? '' : 'WHERE d.is_active = 1'
   const { results } = await env.DB.prepare(
     `SELECT d.name, d.is_active, d.created_at, d.updated_at,
+            EXISTS(SELECT 1 FROM settings s
+                    WHERE s.key = 'domain_deleting:' || d.name) AS is_deleting,
             (SELECT COUNT(*) FROM mailboxes m
               WHERE LOWER(SUBSTR(m.address, INSTR(m.address, '@') + 1)) = d.name
+                AND m.is_hidden = 0
             ) AS mailbox_count
        FROM domains d
        ${condition}
@@ -125,6 +133,9 @@ export async function updateDomain(
     .catch(() => ({} as { isActive?: boolean }))
   if (!validDomainName(name)) return json({ error: '域名格式无效。' }, 400)
   if (typeof body.isActive !== 'boolean') return json({ error: '缺少域名状态。' }, 400)
+  const existing = await domainRow(env, name)
+  if (!existing) return json({ error: '域名不存在。' }, 404)
+  if (existing.is_deleting) return json({ error: '域名正在删除，请等待后台清理完成。' }, 409)
 
   const result = await env.DB.prepare(
     `UPDATE domains
@@ -148,8 +159,62 @@ export async function deleteDomain(
   if (!validDomainName(name)) return json({ error: '域名格式无效。' }, 400)
   const existing = await domainRow(env, name)
   if (!existing) return json({ error: '域名不存在。' }, 404)
-  if (existing.mailbox_count > 0) {
-    return json({ error: '该域名仍有关联邮箱，请先删除这些邮箱。' }, 409)
+  if (existing.is_deleting) return json({ error: '域名正在删除，请等待后台清理完成。' }, 409)
+
+  const count = await env.DB.prepare(
+    `SELECT COUNT(*) AS count FROM mailboxes
+      WHERE LOWER(SUBSTR(address, INSTR(address, '@') + 1)) = ?`,
+  ).bind(name).first<{ count: number }>()
+  const mailboxCount = Number(count?.count || 0)
+
+  if (mailboxCount > 0) {
+    if (!env.CLEANUP_WORKFLOW) {
+      return json({ error: '域名邮箱删除服务暂时不可用，请稍后重试。' }, 503)
+    }
+    const { results: visibleMailboxes } = await env.DB.prepare(
+      `SELECT address, is_active FROM mailboxes
+        WHERE is_hidden = 0
+          AND LOWER(SUBSTR(address, INSTR(address, '@') + 1)) = ?`,
+    ).bind(name).all<{ address: string; is_active: number }>()
+
+    await env.DB.batch([
+      env.DB.prepare(
+        'UPDATE domains SET is_active = 0, updated_at = unixepoch() WHERE name = ?',
+      ).bind(name),
+      env.DB.prepare(
+        `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, unixepoch())
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      ).bind(`domain_deleting:${name}`, String(mailboxCount)),
+      env.DB.prepare(
+        `UPDATE mailboxes SET is_hidden = 1, is_active = 0
+          WHERE is_hidden = 0
+            AND LOWER(SUBSTR(address, INSTR(address, '@') + 1)) = ?`,
+      ).bind(name),
+    ])
+    try {
+      await env.CLEANUP_WORKFLOW.create({
+        id: `domain-delete-${crypto.randomUUID()}`,
+        params: {
+          startedAt: Math.floor(Date.now() / 1000),
+          domainDeletion: { domain: name, requestedBy: user.id },
+        },
+        retention: { successRetention: '3 days', errorRetention: '7 days' },
+      })
+    } catch {
+      const restoreStatements = visibleMailboxes.map((mailbox) => env.DB.prepare(
+        'UPDATE mailboxes SET is_hidden = 0, is_active = ? WHERE address = ? AND is_hidden = 1',
+      ).bind(mailbox.is_active, mailbox.address))
+      await env.DB.batch([
+        env.DB.prepare(
+          'UPDATE domains SET is_active = ?, updated_at = unixepoch() WHERE name = ?',
+        ).bind(existing.is_active, name),
+        env.DB.prepare('DELETE FROM settings WHERE key = ?').bind(`domain_deleting:${name}`),
+        ...restoreStatements,
+      ])
+      return json({ error: '域名邮箱删除任务启动失败，请稍后重试。' }, 503)
+    }
+    await audit(env, user.id, 'domain.delete_scheduled', name, ip)
+    return json({ ok: true, scheduledMailboxCount: mailboxCount }, 202)
   }
 
   await env.DB.batch([
@@ -161,5 +226,5 @@ export async function deleteDomain(
     ).bind(name),
   ])
   await audit(env, user.id, 'domain.delete', name, ip)
-  return json({ ok: true })
+  return json({ ok: true, scheduledMailboxCount: 0 })
 }

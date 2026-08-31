@@ -288,6 +288,31 @@
   line-height: 1.5;
 }
 
+.domain-delete-confirmation {
+  display: grid;
+  gap: 7px;
+  padding: 0 21px 18px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.domain-delete-confirmation input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--text-primary);
+  padding: 0 12px;
+}
+
+.domain-delete-confirmation input:focus {
+  border-color: var(--danger);
+  outline: 3px solid color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
 .domain-delete-dialog > footer {
   display: grid;
   grid-template-columns: 1fr 1.35fr;

@@ -47,6 +47,12 @@ export const enErrors: Record<string, string> = {
   '域名格式无效。': 'The domain format is invalid.',
   '这个域名已经存在。': 'This domain already exists.',
   '只有管理员可以删除域名。': 'Only administrators can delete domains.',
+  '域名正在删除，请等待后台清理完成。':
+    'The domain is being deleted. Wait for background cleanup to finish.',
+  '域名邮箱删除服务暂时不可用，请稍后重试。':
+    'The domain mailbox deletion service is temporarily unavailable. Try again later.',
+  '域名邮箱删除任务启动失败，请稍后重试。':
+    'The domain mailbox deletion task could not be started. Try again later.',
   '只有管理员可以设置域名。': 'Only administrators can update domains.',
   '只有管理员可以添加域名。': 'Only administrators can add domains.',
   '当前账户没有创建邮箱的权限。':

@@ -32,6 +32,7 @@ export function DomainManagement({
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [pendingDelete, setPendingDelete] = useState<ManagedDomain | null>(null)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
 
   useEffect(() => {
     if (!error && !notice) return
@@ -81,7 +82,7 @@ export function DomainManagement({
     const removed = await run(`delete:${domain.name}`, async () => {
       await api.deleteDomain(domain.name)
     }, domain.mailboxCount > 0
-      ? t('域名配置已删除，已有邮箱和邮件仍然保留。')
+      ? t('域名及 {count} 个关联邮箱已进入后台删除流程。', { count: domain.mailboxCount })
       : t('域名配置已删除。'))
     if (removed) setPendingDelete(null)
   }
@@ -136,12 +137,12 @@ export function DomainManagement({
               </div>
               <span className={`domain-state ${domain.isActive ? 'is-active' : ''}`}>
                 <span aria-hidden="true" />
-                {t(domain.isActive ? '允许创建' : '已停用')}
+                {t(domain.isDeleting ? '正在删除' : domain.isActive ? '允许创建' : '已停用')}
               </span>
               <button
                 className="button button--secondary button--small"
                 type="button"
-                disabled={Boolean(busy)}
+                disabled={Boolean(busy) || domain.isDeleting}
                 onClick={() => void toggle(domain)}
               >
                 {toggling
@@ -152,8 +153,8 @@ export function DomainManagement({
               <button
                 className="button button--secondary button--small domain-delete"
                 type="button"
-                disabled={Boolean(busy)}
-                onClick={() => setPendingDelete(domain)}
+                disabled={Boolean(busy) || domain.isDeleting}
+                onClick={() => { setDeleteConfirmation(''); setPendingDelete(domain) }}
                 data-tooltip={t('删除域名配置')}
               >
                 {deleting
@@ -201,15 +202,29 @@ export function DomainManagement({
                 <X size={16} />
               </button>
             </header>
-            <p className="domain-delete-lead">{t('请先确认删除后的影响。这个操作只删除 OmniMail 中的域名管理配置。')}</p>
+            <p className="domain-delete-lead">{t('请先确认删除后的影响。提交后将由后台任务永久清理域名及其关联数据。')}</p>
             <div className="domain-delete-risks">
-              <p><Mail size={17} /><span><strong>{t('{count} 个已有邮箱会保留', { count: pendingDelete.mailboxCount })}</strong><small>{t('邮箱地址、历史邮件和附件不会被删除，并且仍可继续查看。')}</small></span></p>
+              <p><Mail size={17} /><span><strong>{t('{count} 个关联邮箱将被删除', { count: pendingDelete.mailboxCount })}</strong><small>{t('邮箱地址、历史邮件、草稿、附件和取码地址将被永久清理。')}</small></span></p>
               <p><Link2 size={17} /><span><strong>{t('相关邀请链接会失效')}</strong><small>{t('使用该域名且尚未注册的邀请将无法继续使用。')}</small></span></p>
               <p><Globe2 size={17} /><span><strong>{t('不会修改 Cloudflare DNS')}</strong><small>{t('Email Routing、MX 和其他 DNS 记录需要在 Cloudflare 中单独管理。')}</small></span></p>
             </div>
+            {pendingDelete.mailboxCount > 0 && <label className="domain-delete-confirmation">
+              <span>{t('输入 {domain} 确认永久删除', { domain: pendingDelete.name })}</span>
+              <input
+                value={deleteConfirmation}
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+              />
+            </label>}
             <footer>
               <button className="button button--secondary" type="button" disabled={Boolean(busy)} onClick={() => setPendingDelete(null)}>{t('取消')}</button>
-              <button className="button domain-delete-confirm" type="button" disabled={Boolean(busy)} onClick={() => void remove()}>
+              <button
+                className="button domain-delete-confirm"
+                type="button"
+                disabled={Boolean(busy) || (pendingDelete.mailboxCount > 0 && deleteConfirmation !== pendingDelete.name)}
+                onClick={() => void remove()}
+              >
                 {busy.startsWith('delete:')
                   ? <LoaderCircle className="spin" size={16} />
                   : <Trash2 size={16} />}

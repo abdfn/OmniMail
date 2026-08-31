@@ -61,9 +61,13 @@ const english = {
 const englishPlurals: Record<string, [string, string]> = {
   '{count} 个邮箱地址': ['{count} mailbox', '{count} mailboxes'],
   '{count} 个启用地址': ['{count} enabled address', '{count} enabled addresses'],
-  '{count} 个已有邮箱会保留': [
-    '{count} existing mailbox will remain',
-    '{count} existing mailboxes will remain',
+  '{count} 个关联邮箱将被删除': [
+    '{count} associated mailbox will be deleted',
+    '{count} associated mailboxes will be deleted',
+  ],
+  '域名及 {count} 个关联邮箱已进入后台删除流程。': [
+    'The domain and {count} associated mailbox are queued for background deletion.',
+    'The domain and {count} associated mailboxes are queued for background deletion.',
   ],
   '{count} 封': ['{count} message', '{count} messages'],
   '{date}：{count} 封': ['{date}: {count} message', '{date}: {count} messages'],

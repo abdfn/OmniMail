@@ -411,6 +411,7 @@ export interface MailboxAddress {
 export interface ManagedDomain {
   name: string
   isActive: boolean
+  isDeleting: boolean
   mailboxCount: number
   createdAt: number
   updatedAt: number

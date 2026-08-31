@@ -32,6 +32,10 @@ export interface CleanupWorkflowParams {
     userId: string
     requestedBy: string
   }
+  domainDeletion?: {
+    domain: string
+    requestedBy: string
+  }
 }
 
 export interface Env {
