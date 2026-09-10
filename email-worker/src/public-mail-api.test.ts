@@ -201,7 +201,7 @@ describe('public mailbox access', () => {
     expect(Number(messageQuery?.bindings[1])).toBeLessThanOrEqual(
       Math.floor(Date.now() / 1000) - 3599,
     )
-    expect(messageQuery?.bindings[4]).toBe(10)
+    expect(messageQuery?.bindings[4]).toBe(3)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
     const linkQuery = statements.find(({ sql }) => sql.includes('FROM mailbox_public_links l'))
     expect(linkQuery?.sql).toContain("u.status = 'active'")
