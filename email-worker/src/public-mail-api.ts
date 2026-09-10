@@ -6,7 +6,8 @@ import { searchLikePattern } from './message-search'
 import type { Env, SessionUser, StoredBody } from './types'
 
 const PUBLIC_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/
-const PUBLIC_RATE_LIMIT = 60
+// 限制公开取码频率，降低高频轮询造成的 D1 读取消耗
+const PUBLIC_RATE_LIMIT = 30
 const PUBLIC_RATE_WINDOW_SECONDS = 60
 const MAX_BATCH_MAILBOXES = 100
 const MESSAGE_SCAN_LIMIT = 10
@@ -326,15 +327,32 @@ export async function publicMailboxCode(
 
   const { results: messages } = await env.DB.prepare(
     `SELECT m.id, m.sender_address, m.subject, m.preview,
-            m.received_at, m.created_at, m.body_key
+            m.received_at, m.created_at, m.body_key, m.sort_at
        FROM messages m
-      WHERE COALESCE(m.delivered_to, m.mailbox_address) = ?
+      WHERE m.delivered_to = ?
         AND m.direction = 'incoming'
         AND m.folder = 'inbox'
         AND m.status = 'ready'
-      ORDER BY m.sort_at DESC, m.id DESC
+        AND m.sort_at >= ?
+     UNION ALL
+     SELECT m.id, m.sender_address, m.subject, m.preview,
+            m.received_at, m.created_at, m.body_key, m.sort_at
+       FROM messages m
+      WHERE m.delivered_to IS NULL
+        AND m.mailbox_address = ?
+        AND m.direction = 'incoming'
+        AND m.folder = 'inbox'
+        AND m.status = 'ready'
+        AND m.sort_at >= ?
+      ORDER BY sort_at DESC, id DESC
       LIMIT ?`,
-  ).bind(mailbox.mailbox_address, MESSAGE_SCAN_LIMIT).all<PublicMessageRow>()
+  ).bind(
+    mailbox.mailbox_address,
+    now - 60 * 60,
+    mailbox.mailbox_address,
+    now - 60 * 60,
+    MESSAGE_SCAN_LIMIT,
+  ).all<PublicMessageRow>()
   for (const message of messages) {
     const code = await codeFromMessage(env, message)
     if (!code) continue

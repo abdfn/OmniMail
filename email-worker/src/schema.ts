@@ -1,4 +1,4 @@
-const REQUIRED_MIGRATION = '0022_mailbox_public_links.sql'
+const REQUIRED_MIGRATION = '0023_public_mail_code_lookup.sql'
 const schemaChecks = new WeakMap<D1Database, Promise<void>>()
 
 const WRANGLER_MIGRATION_NAMES = [
@@ -23,6 +23,7 @@ const WRANGLER_MIGRATION_NAMES = [
   '0019_extension_authorization.sql',
   '0020_device_token_scopes.sql',
   '0021_icloud_accounts.sql',
+  '0022_mailbox_public_links.sql',
   REQUIRED_MIGRATION,
 ] as const
 
@@ -237,7 +238,7 @@ const RECOVERABLE_MIGRATIONS = [
     ],
   },
   {
-    name: REQUIRED_MIGRATION,
+    name: '0022_mailbox_public_links.sql',
     statements: [
       `CREATE TABLE mailbox_public_links (
         mailbox_address TEXT PRIMARY KEY COLLATE NOCASE
@@ -257,6 +258,17 @@ const RECOVERABLE_MIGRATIONS = [
       )`,
       `CREATE INDEX idx_public_mail_rate_limits_updated
        ON public_mail_rate_limits(updated_at)`,
+    ],
+  },
+  {
+    name: REQUIRED_MIGRATION,
+    statements: [
+      `CREATE INDEX IF NOT EXISTS idx_messages_delivered_to_public_code
+       ON messages(delivered_to, sort_at DESC, id DESC)
+       WHERE direction = 'incoming' AND folder = 'inbox' AND status = 'ready'`,
+      `CREATE INDEX IF NOT EXISTS idx_messages_mailbox_public_code
+       ON messages(mailbox_address, sort_at DESC, id DESC)
+       WHERE direction = 'incoming' AND folder = 'inbox' AND status = 'ready'`,
     ],
   },
 ] as const

@@ -187,8 +187,21 @@ describe('public mailbox access', () => {
 
     expect(response.status).toBe(200)
     expect(body).toMatchObject({ email: 'only@example.com', code: '765432' })
-    expect(messageQuery?.sql).toContain('COALESCE(m.delivered_to, m.mailbox_address) = ?')
+    expect(messageQuery?.sql).toContain('m.delivered_to = ?')
+    expect(messageQuery?.sql).toContain('m.delivered_to IS NULL')
+    expect(messageQuery?.sql).toContain('m.mailbox_address = ?')
+    expect(messageQuery?.sql).toContain('m.sort_at >= ?')
+    expect(messageQuery?.sql).toContain('UNION ALL')
     expect(messageQuery?.bindings[0]).toBe('only@example.com')
+    expect(messageQuery?.bindings[2]).toBe('only@example.com')
+    expect(messageQuery?.bindings[1]).toBe(messageQuery?.bindings[3])
+    expect(Number(messageQuery?.bindings[1])).toBeGreaterThanOrEqual(
+      Math.floor(Date.now() / 1000) - 3601,
+    )
+    expect(Number(messageQuery?.bindings[1])).toBeLessThanOrEqual(
+      Math.floor(Date.now() / 1000) - 3599,
+    )
+    expect(messageQuery?.bindings[4]).toBe(10)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
     const linkQuery = statements.find(({ sql }) => sql.includes('FROM mailbox_public_links l'))
     expect(linkQuery?.sql).toContain("u.status = 'active'")
@@ -219,7 +232,7 @@ describe('public mailbox access', () => {
     })
   })
 
-  it('returns 429 on the sixty-first request without reading messages', async () => {
+  it('returns 429 on the thirty-first request without reading messages', async () => {
     const token = 'c'.repeat(43)
     const all = vi.fn(async () => ({ results: [] }))
     const db = {
@@ -227,7 +240,7 @@ describe('public mailbox access', () => {
         const statement = {
           bind() { return statement },
           first: async () => sql.includes('public_mail_rate_limits')
-            ? { window_started_at: Math.floor(Date.now() / 1000), request_count: 61 }
+            ? { window_started_at: Math.floor(Date.now() / 1000), request_count: 31 }
             : { mailbox_address: 'limited@example.com' },
           all,
         }

@@ -94,6 +94,7 @@ const FINAL_MIGRATIONS = [
   '0020_device_token_scopes.sql',
   '0021_icloud_accounts.sql',
   '0022_mailbox_public_links.sql',
+  '0023_public_mail_code_lookup.sql',
 ]
 
 describe('D1 migration check', () => {
@@ -111,10 +112,10 @@ describe('D1 migration check', () => {
   })
 
   it.each([
-    ['2026-07-29-p5-outbound-rate-limit-admin', 14, 9],
-    ['2026-08-01-p2-translation-permissions', 16, 7],
-    ['2026-08-03-p3-multiple-drafts', 17, 6],
-  ])('recovers legacy schema %s through migration 0022', async (
+    ['2026-07-29-p5-outbound-rate-limit-admin', 14, 10],
+    ['2026-08-01-p2-translation-permissions', 16, 8],
+    ['2026-08-03-p3-multiple-drafts', 17, 7],
+  ])('recovers legacy schema %s through migration 0023', async (
     legacyVersion,
     baseline,
     batchCount,
@@ -124,10 +125,11 @@ describe('D1 migration check', () => {
 
     expect(fixture.batch).toHaveBeenCalledTimes(batchCount)
     expect(fixture.batches[0]).toHaveLength(baseline + 1)
-    expect(fixture.applied.size).toBe(22)
+    expect(fixture.applied.size).toBe(23)
     expect(fixture.applied.has('0020_device_token_scopes.sql')).toBe(true)
     expect(fixture.applied.has('0021_icloud_accounts.sql')).toBe(true)
     expect(fixture.applied.has('0022_mailbox_public_links.sql')).toBe(true)
+    expect(fixture.applied.has('0023_public_mail_code_lookup.sql')).toBe(true)
     expect(fixture.prepare).toHaveBeenCalledWith(
       "ALTER TABLE device_sessions ADD COLUMN scopes TEXT NOT NULL DEFAULT '*'",
     )
@@ -136,6 +138,9 @@ describe('D1 migration check', () => {
     ))).toBe(true)
     expect(fixture.prepare.mock.calls.some(([sql]) => (
       String(sql).includes('CREATE TABLE mailbox_public_links')
+    ))).toBe(true)
+    expect(fixture.prepare.mock.calls.some(([sql]) => (
+      String(sql).includes('idx_messages_delivered_to_public_code')
     ))).toBe(true)
   })
 
@@ -147,7 +152,7 @@ describe('D1 migration check', () => {
 
     await ensureSchema(fixture.db)
 
-    expect(fixture.applied.size).toBe(22)
+    expect(fixture.applied.size).toBe(23)
     expect(fixture.batches[0]).toHaveLength(18)
   })
 
@@ -174,16 +179,17 @@ describe('D1 migration check', () => {
     expect(fixture.applied.has('0020_device_token_scopes.sql')).toBe(true)
     expect(fixture.applied.has('0021_icloud_accounts.sql')).toBe(true)
     expect(fixture.applied.has('0022_mailbox_public_links.sql')).toBe(true)
+    expect(fixture.applied.has('0023_public_mail_code_lookup.sql')).toBe(true)
     expect(fixture.prepare).not.toHaveBeenCalledWith(
       "ALTER TABLE device_sessions ADD COLUMN scopes TEXT NOT NULL DEFAULT '*'",
     )
-    expect(fixture.batch).toHaveBeenCalledTimes(2)
+    expect(fixture.batch).toHaveBeenCalledTimes(3)
   })
 
   it('accepts a concurrent migration completed by another isolate', async () => {
     const fixture = database({
       applied: FINAL_MIGRATIONS.slice(0, -1),
-      concurrentMigration: '0022_mailbox_public_links.sql',
+      concurrentMigration: '0023_public_mail_code_lookup.sql',
     })
 
     await expect(ensureSchema(fixture.db)).resolves.toBeUndefined()
@@ -196,7 +202,7 @@ describe('D1 migration check', () => {
       failBatchOnce: true,
     })
 
-    await expect(ensureSchema(fixture.db)).rejects.toThrow('0022_mailbox_public_links.sql')
+    await expect(ensureSchema(fixture.db)).rejects.toThrow('0023_public_mail_code_lookup.sql')
     await expect(ensureSchema(fixture.db)).resolves.toBeUndefined()
     expect(fixture.batch).toHaveBeenCalledTimes(2)
   })
